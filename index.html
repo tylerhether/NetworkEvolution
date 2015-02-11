@@ -13,7 +13,7 @@
             .enter()
             .append("p")
             .text(function(dat) {
-                return "I can do count to " + dat + " sometimes.";})
+                return "Some text and the the datum " + dat + " in a sentence.";})
             .style("color", function(d){
                 if(d>=15) {
                     return "red";
@@ -21,7 +21,6 @@
                     return "green";
                 }
             });
-            //d3.select("body").append("p").text("New paragraph!");
         </script>
     </body>
 </html>    
