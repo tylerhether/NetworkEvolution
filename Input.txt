@@ -1,9 +1,0 @@
-HelloWorld input file
-
-number of populations: 2
-number of individuals: 2000
-number of chromosomes: 2
-number of loci: 2
-
-
-
