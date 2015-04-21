@@ -1,0 +1,23 @@
+Generatl Outline for Simulation:
+
+
+
+Initialize Everything:
+    Create Populations
+        Create individuals
+        Create loci
+        Create coding and regulatory alleles
+            Seed coding and reg alleles so that the populations' mean phenotype is at a given position in phenotypic space
+Recursion:
+    Selectively asses hybrid fitness
+        Get hybrid fitness
+    Selection
+        Get fitness
+        Cull individuals based of fitness
+    Mating
+        Random Mating
+        Recombination
+    Migration
+        Migrate Individuals following a pull-ball model
+    Summary Statistics
+        Output data
