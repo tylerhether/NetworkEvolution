@@ -47,7 +47,7 @@ public:
     Populations();
     
     // Initialize population
-    void initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2);
+    void initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2, double allelic_Stdev);
     
     // Destroy population. Can't we just used a destructor here?
     void deletePop();
@@ -61,7 +61,7 @@ public:
 void input(Populations *popPtr, int POPS, int INDS);             // These are function prototypes
 void printLocus(locus Locus);               // These are function prototypes
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
-double make_genos(double geno_value);
+double make_genos(double geno_value, double allelic_stdev);
 
 
 // Main Function to run:
@@ -69,42 +69,34 @@ int main(int argc, char *argv[])
 {
 
     // Pull in command line arguments
-    if (argc != 10) {
+    if (argc != 11) {
         // Inform the user of how to use the program if not entered in correctly
-        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations>\n";
+        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations> <allelic_stdev>\n";
         std::cout << argc-1 << " given" << endl;
         exit(0);
     }
     
-    int numPops(atoi(argv[1]));
-    int numInds(atoi(argv[2]));
-    double x1(atoi(argv[3]));
-    double x2(atoi(argv[4]));
-    char* reg_pattern = argv[5];
-    double theta(atoi(argv[6]));
-    double gamma(atoi(argv[7]));
-    char *mod = argv[8];
-    long num_generations(atoi(argv[8]));
+    int numPops(atoi(argv[1]));                 // Number of Populations
+    int numInds(atoi(argv[2]));                 // Number of Individuals per population
+    double x1(atoi(argv[3]));                   // Initial mean trait value for trait # 1
+    double x2(atoi(argv[4]));                   // Initial mean trait value for trait # 2
+    char* reg_pattern = argv[5];                // r11, r12, r21, r22 where rij is the reg allele for locus i and allele j
+    double theta(atoi(argv[6]));                // Theta value for network regulation
+    double gamma(atoi(argv[7]));                // gamma (decay) rate for network regulation
+    char *mod = argv[8];                        // model used: 'A' or 'B'
+    int num_generations(atoi(argv[9]));         // Number of generations to simulate
+    double allelic_Stdev(atoi(argv[10]));       // Initial standard dev. of allelic values to seed standing genetic variation
     
     
     
     
     
-    srand((unsigned int)time(NULL));        // Seeding Random
+//    srand((unsigned int)time(NULL));        // Seeding Random
     Populations Pop;                     // Initialize Populations
     
     // Running:
     input(&Pop, numPops, numInds);
 
-    
-
-    // The following variables need to be passed as arguments to Pheno_to_Geno
-//    double x1(200), x2(300);
-//    string reg_pattern = "2222";
-//    double theta(300);
-//    double gamma(1);
-//    char mod = 'B';
-//    
     // Initialize genotypic values. These will be updated in the next function.
     double a1, a2;
     
@@ -112,26 +104,35 @@ int main(int argc, char *argv[])
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
 
     // Initialize the populations:
-    Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2);
+    Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2, allelic_Stdev); // TO DO: remove hard-coded variances in random normal generation
     
-//    double tmp;
-//    tmp = a1+make_genos(a1/2);
-//    cout << "here : " << tmp << endl;
-//    
-//     Recursion:
-        for(int g(0); g<num_generations; g++){
-            Pop.printPop(); // All other stuff goes here
-        }
 
-    std::cout << "reg_pattern = " << reg_pattern[3] << endl;
-    
-    std::cout << a1 << " " << a2 << std::endl;
+    // Recursion:
+    for(int g=0; g<num_generations; g++){
+        Pop.printPop();             // Troubleshooting: print populations
+        
+        // Need selection
+        
+        // Need mutation
+        
+        // Need mating
+        
+        // Need migration
+        
+        // Need output summary stats to file
+        
+        
+    }
+
    
     // Cleaning up:
     Pop.deletePop();
-    if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
-    else if( __cplusplus == 199711L ) std::cout << "C++98\n" ;
-    else std::cout << "pre-standard C++\n" ;
+    
+    /* Troubleshooting: run this block of code to determine the version of C++ that is used:
+     * if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
+     * else if( __cplusplus == 199711L ) std::cout << "C++98\n" ;
+     * else std::cout << "pre-standard C++\n" ;*/
+    
     return 0;
 }
 
@@ -144,7 +145,7 @@ Populations::Populations()
     pop=NULL;
 }
 
-void Populations::initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2)
+void Populations::initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2, double allelic_Stdev)
 {
     pop=new locus***[numPops];
     for(int p=0; p<numPops; p++){
@@ -159,11 +160,11 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
                     // Need to make genotype for the individual
                     
                     if(c==0){
-                        pop[p][i][c][l].coding=a1+make_genos(a1/2);
+                        pop[p][i][c][l].coding=a1+make_genos(a1/2, allelic_Stdev);
                         pop[p][i][c][l].regulatory=static_cast<char>(reg_pattern[counter]);
                     }
                     if(c==1){
-                        pop[p][i][c][l].coding=a2+make_genos(a2/2);
+                        pop[p][i][c][l].coding=a2+make_genos(a2/2, allelic_Stdev);
                         pop[p][i][c][l].regulatory=static_cast<char>(reg_pattern[counter]);
                     }
                     counter++;
@@ -179,10 +180,6 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
     }
     
 }
-
-
-
-
 
 void Populations::deletePop()
 {
@@ -902,7 +899,7 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
     x = 20.3;
 }
 
-double make_genos(double geno_value)
+double make_genos(double geno_value, double allelic_stdev)
 {
     using namespace std;
     random_device rd;
@@ -913,62 +910,6 @@ double make_genos(double geno_value)
     return dist(e2);
 }
 
-
-//
-//make.genotypes <- function(num.individuals, mean.trait1, mean.trait2, sd.trait1, sd.trait2, theta, motif, rand.var="normal.genetic.level", mod, ...){
-//# This function finds the starting allelic values for a specified range
-//# around a given 2-trait optimum and for a given motif
-//    
-//#Testing
-//# num.individuals=(N1)
-//# mean.trait1=OPTIMA[1]
-//# mean.trait2=OPTIMA[2]
-//# sd.trait1=20
-//# sd.trait2=20
-//# motif=strsplit(motif, split="_")[[1]][1]
-//# rand.var="normal.genetic.level"
-//    
-//    
-//    
-//    if(rand.var=="normal"){
-//        x <- rnorm(num.individuals, mean=mean.trait1, sd=sd.trait1)
-//        y <- rnorm(num.individuals, mean=mean.trait2, sd=sd.trait2)
-//    }
-//    if(rand.var=="uniform"){
-//        x <- runif(num.individuals, (mean.trait1-sd.trait1), (sd.trait1+mean.trait1))
-//        y <- runif(num.individuals, (mean.trait2-sd.trait2), (sd.trait2+mean.trait2))
-//    }
-//    if(rand.var=="normal.genetic.level"){
-//        x <- mean.trait1
-//        y <- mean.trait2
-//        sigmaSquared_1 <- sd.trait1^2
-//        sigmaSquared_2 <- sd.trait2^2
-//    }
-//    
-//    th <- theta
-//    g <- gamma
-//    
-//# if(motif!="1111"){
-//#     stop("The starting motif needs to be 1111")
-//# }
-//    genos <- Pheno_to_Geno(reg_pattern=motif, theta=th, g=g, x=x, y=y, mod=mod)
-//    
-//    a <- genos[1]
-//    b <- genos[2]
-//    
-//    X <- cbind(a/2, a/2, b/2, b/2)
-//# P <- GenoPhenoMapping(X, motif="NULL", theta=t)
-//    
-//    if(rand.var=="normal.genetic.level"){
-//        a11 = rnorm(N1, mean=X[1,1], sd=sqrt(sigmaSquared_1/2))
-//        a12 = rnorm(N1, mean=X[1,2], sd=sqrt(sigmaSquared_1/2))
-//        a21 = rnorm(N1, mean=X[1,3], sd=sqrt(sigmaSquared_1/2))
-//        a22 = rnorm(N1, mean=X[1,4], sd=sqrt(sigmaSquared_1/2))
-//        X = cbind(a11, a12, a21, a22)
-//    }
-//    
-//    return(X)
-//}
 
 
 
