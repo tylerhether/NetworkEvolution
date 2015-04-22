@@ -20,7 +20,7 @@
 #include <complex>
 #include <algorithm>
 #include <fstream>
-#include <cstdlib> // allows us to halt with exit() function
+#include <cstdlib> // allows us to halt with exit() function and use things like atoi
 
 
 using namespace std; // This let's you use the shorthand the std library's functions
@@ -59,11 +59,30 @@ public:
 // Forward Declarations of Functions:       // Can be moved to a header file if gets too long.
 void input(Populations *popPtr, char *argvs);             // These are function prototypes
 void printLocus(locus Locus);               // These are function prototypes
-void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char mod, double &a1, double &a2);
+void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
 
 // Main Function to run:
 int main(int argc, char *argv[])
 {
+
+    // Pull in command line arguments
+    if (argc != 8) {
+        // Inform the user of how to use the program if not entered in correctly
+        std::cout << "Usage is <infile> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model>\n";
+        std::cout << argc-1 << " given" << endl;
+        exit(0);
+    }
+    double x1(atoi(argv[2]));
+    double x2(atoi(argv[3]));
+    char* reg_pattern = argv[4];
+    double theta(atoi(argv[5]));
+    double gamma(atoi(argv[6]));
+    char *mod = argv[7];
+    
+    
+    
+    
+    
     srand((unsigned int)time(NULL));        // Seeding Random
     Populations Pop;                     // Initialize Populations
     
@@ -73,12 +92,12 @@ int main(int argc, char *argv[])
     
 
     // The following variables need to be passed as arguments to Pheno_to_Geno
-    double x1(200), x2(300);
-    string reg_pattern = "2222";
-    double theta(300);
-    double gamma(1);
-    char mod = 'B';
-    
+//    double x1(200), x2(300);
+//    string reg_pattern = "2222";
+//    double theta(300);
+//    double gamma(1);
+//    char mod = 'B';
+//    
     // Initialize genotypic values. These will be updated in the next function.
     double a1, a2;
     
@@ -86,7 +105,7 @@ int main(int argc, char *argv[])
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
 
     
-    Pop.initilizePop(reg_pattern, theta, gamma, mod, a1, a2);
+    Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2);
     
     // Recursion:
     //    for(int g(0); g<100; g++){
@@ -99,7 +118,9 @@ int main(int argc, char *argv[])
    
     // Cleaning up:
     Pop.deletePop();
-    
+    if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
+    else if( __cplusplus == 199711L ) std::cout << "C++98\n" ;
+    else std::cout << "pre-standard C++\n" ;
     return 0;
 }
 
@@ -238,9 +259,9 @@ void printLocus(locus Locus)
 //}
 
 
-void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char mod, double &a1, double &a2)
+void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2)
 {
-    switch(mod)
+    switch(*mod)
     {
             case 'A':
             if(reg_pattern=="0000"){
