@@ -61,6 +61,14 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "/Users/tylerhether/Projects/09-NetworkEvolutioncpp/NetworkEvolution/NetworkEvolution2/Input.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "2"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "1"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -72,7 +80,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "&quot;2222&quot;"
+            argument = "1122"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -85,6 +93,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "&apos;B&apos;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "100"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

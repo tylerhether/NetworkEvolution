@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cstdlib> // allows us to halt with exit() function and use things like atoi
+#include <random>
 
 
 using namespace std; // This let's you use the shorthand the std library's functions
@@ -28,7 +29,7 @@ using namespace std; // This let's you use the shorthand the std library's funct
 //Clasess and Strcutures
 struct locus                                // Initialize the locus structure
 {
-    int regulatory;                         // regulatory alleles can only be the integers 0,1,2
+    string regulatory;                         // regulatory alleles can only be the integers 0,1,2
     double coding;                          // coding alleles are continuous
 };
 
@@ -57,27 +58,33 @@ public:
 };
 
 // Forward Declarations of Functions:       // Can be moved to a header file if gets too long.
-void input(Populations *popPtr, char *argvs);             // These are function prototypes
+void input(Populations *popPtr, int POPS, int INDS);             // These are function prototypes
 void printLocus(locus Locus);               // These are function prototypes
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
+double make_genos(double geno_value);
+
 
 // Main Function to run:
 int main(int argc, char *argv[])
 {
 
     // Pull in command line arguments
-    if (argc != 8) {
+    if (argc != 10) {
         // Inform the user of how to use the program if not entered in correctly
-        std::cout << "Usage is <infile> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model>\n";
+        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations>\n";
         std::cout << argc-1 << " given" << endl;
         exit(0);
     }
-    double x1(atoi(argv[2]));
-    double x2(atoi(argv[3]));
-    char* reg_pattern = argv[4];
-    double theta(atoi(argv[5]));
-    double gamma(atoi(argv[6]));
-    char *mod = argv[7];
+    
+    int numPops(atoi(argv[1]));
+    int numInds(atoi(argv[2]));
+    double x1(atoi(argv[3]));
+    double x2(atoi(argv[4]));
+    char* reg_pattern = argv[5];
+    double theta(atoi(argv[6]));
+    double gamma(atoi(argv[7]));
+    char *mod = argv[8];
+    long num_generations(atoi(argv[8]));
     
     
     
@@ -87,7 +94,7 @@ int main(int argc, char *argv[])
     Populations Pop;                     // Initialize Populations
     
     // Running:
-    input(&Pop, argv[1]);
+    input(&Pop, numPops, numInds);
 
     
 
@@ -104,15 +111,19 @@ int main(int argc, char *argv[])
     // Find the genotypic values that make the starting two-trait phenotype
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
 
-    
+    // Initialize the populations:
     Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2);
     
-    // Recursion:
-    //    for(int g(0); g<100; g++){
+//    double tmp;
+//    tmp = a1+make_genos(a1/2);
+//    cout << "here : " << tmp << endl;
+//    
+//     Recursion:
+        for(int g(0); g<num_generations; g++){
             Pop.printPop(); // All other stuff goes here
-    //    }
-    
-   
+        }
+
+    std::cout << "reg_pattern = " << reg_pattern[3] << endl;
     
     std::cout << a1 << " " << a2 << std::endl;
    
@@ -132,44 +143,46 @@ Populations::Populations()
 {
     pop=NULL;
 }
-//void Populations::initilizePop()
-//{
-//    pop=new locus***[numInd];
-//    for(int p=0; p<numPops; p++){
-//        pop[p]=new locus**[numInd];
-//        for(int i=0; i<numInd; i++){
-//            pop[p][i]=new locus*[numChromo];
-//            for(int c=0;c<numChromo;c++){
-//                pop[p][i][c]=new locus[numLoci];
-//                for(int l=0; l<numLoci;l++){
-//                    pop[p][i][c][l].coding=0.01;           // Seed coding allele expression
-//                    pop[p][i][c][l].regulatory=rand() % 3; // Seed regulatory allele
-//                    //                pop[i][c][l].sex=rand() % 2;        // Seed sex
-//                }
-//            }
-//        }
-//    }
-//    
-//}
+
 void Populations::initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2)
 {
-    pop=new locus***[numInd];
+    pop=new locus***[numPops];
     for(int p=0; p<numPops; p++){
         pop[p]=new locus**[numInd];
         for(int i=0; i<numInd; i++){
             pop[p][i]=new locus*[numChromo];
+            int counter(0);
             for(int c=0;c<numChromo;c++){
                 pop[p][i][c]=new locus[numLoci];
+
                 for(int l=0; l<numLoci;l++){
                     // Need to make genotype for the individual
-                    pop[p][i][c][l].coding=gamma;           // Seed coding allele expression
-                    pop[p][i][c][l].regulatory=rand() % 3; // Seed regulatory allele
+                    
+                    if(c==0){
+                        pop[p][i][c][l].coding=a1+make_genos(a1/2);
+                        pop[p][i][c][l].regulatory=static_cast<char>(reg_pattern[counter]);
+                    }
+                    if(c==1){
+                        pop[p][i][c][l].coding=a2+make_genos(a2/2);
+                        pop[p][i][c][l].regulatory=static_cast<char>(reg_pattern[counter]);
+                    }
+                    counter++;
+                    if(counter==4){
+                        counter=0;
+                    }
+                    
+//                    pop[p][i][c][l].coding=gamma;           // Seed coding allele expression
+//                    pop[p][i][c][l].regulatory=rand() % 3; // Seed regulatory allele
                 }
             }
         }
     }
     
 }
+
+
+
+
 
 void Populations::deletePop()
 {
@@ -201,49 +214,21 @@ void Populations::printPop()
 
 
 //General Functions
-void input(Populations* popPtr, char *args)
+void input(Populations *popPtr, int POPS, int INDS)
 {
-    fstream inFile;
-//    inFile.open("/Users/tylerhether/Projects/09-NetworkEvolutioncpp/NetworkEvolution/NetworkEvolution2/Input.txt");
-//    using namespace std;
-//    cout << argv[1] << endl;
-    inFile.open(args);
-    string myString;
-    myString="Nothing";
     
-    while(myString!= "populations:" && inFile.good())
-    {
-        inFile>>myString;
-    }
-    inFile>>(*popPtr).numPops;
+    (*popPtr).numPops = POPS;
+    cout<<POPS<<endl;
     cout<<"# of populations are "<<(*popPtr).numPops<<endl;
-    
-    
-    while(myString!= "individuals:" && inFile.good())
-    {
-        inFile>>myString;
-    }
-    inFile>>(*popPtr).numInd;
+    (*popPtr).numInd = INDS;
     cout<<"# of individuals are "<<(*popPtr).numInd<<endl;
-    
-    
-    while(myString!= "chromosomes:" && inFile.good())
-    {
-        inFile>>myString;
-    }
-    inFile>>(*popPtr).numChromo;
+    (*popPtr).numChromo = 2;
     cout<<"# of chromosomes are "<<(*popPtr).numChromo<<endl;
-    
-    
-    while(myString!= "loci:" && inFile.good())
-    {
-        inFile>>myString;
-    }
-    inFile>>(*popPtr).numLoci;
-    // (*popPtr).numLoci = 0;
+    (*popPtr).numLoci =2;
     cout<<"# of loci are "<<(*popPtr).numLoci<<endl;
     
 }
+
 void printLocus(locus Locus)
 {
     cout<<"Locus"<<endl;
@@ -251,13 +236,6 @@ void printLocus(locus Locus)
     cout<<"coding = " <<Locus.coding<<endl;
     
 }
-
-// function to initialize genotypes
-//void IntGenos()
-//{
-//    
-//}
-
 
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2)
 {
@@ -924,7 +902,16 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
     x = 20.3;
 }
 
-
+double make_genos(double geno_value)
+{
+    using namespace std;
+    random_device rd;
+    mt19937 e2(rd());
+    normal_distribution<double> dist(0, 20);
+    
+//    cout << "Here's the result: " <<  dist(e2) << endl;
+    return dist(e2);
+}
 
 
 //
