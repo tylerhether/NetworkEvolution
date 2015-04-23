@@ -1,0 +1,1 @@
+/usr/bin/c++   -stdlib=libc++ -dynamiclib -Wl,-headerpad_max_install_names   -compatibility_version 5.0.0 -current_version 5.0.1 -o libarmadillo.5.000.1.dylib -install_name /Users/tylerhether/Projects/09-NetworkEvolutioncpp/NetworkEvolution/armadillo-5.000.1/libarmadillo.5.dylib CMakeFiles/armadillo.dir/src/wrapper.cpp.o -framework Accelerate 

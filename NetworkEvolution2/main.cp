@@ -22,10 +22,11 @@
 #include <fstream>
 #include <cstdlib> // allows us to halt with exit() function and use things like atoi
 #include <random>
-
+#include "./armadillo" // Needed for matrix alg. Assumes armadillo header is in same directory as main.cp
+//#include <armadillo> // Path not needed for command-line compiling
 
 using namespace std; // This let's you use the shorthand the std library's functions
-
+using namespace arma;
 //Clasess and Strcutures
 struct locus                                    // Initialize the locus structure
 {
@@ -36,8 +37,9 @@ struct locus                                    // Initialize the locus structur
 };
 struct phenotypes
 {
-    double xx;
-    double yy;
+    double xx;                                  // Trait 1's value
+    double yy;                                  // Trait 2's value
+    double ww;                                  // Individual's fitness
 };
 
 class Populations                            // Initialize the population class
@@ -66,24 +68,22 @@ public:
     void getPheno(double theta, double gamma, char mod);
     void geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY);
     
-    // Destroy population. Can't we just used a destructor here?
-//    void deletePop();
+    // Destroy Populations.
     ~Populations() // destructor
     {
         // We need to deallocate our buffer
         delete[] xys;
         delete[] pop;
-        // Set m_pchString to null just in case
+        // Set structs to null just in case
         xys = 0;
         pop = 0;
         
     }
     
-    // Also need to delete phenos
-    
-    
     // Print population to screen (for debugging)
     void printPop();
+    
+    // Calculate the fitness given the trait values, selection, and triat optimum
     
 };
 
@@ -92,7 +92,7 @@ void input(Populations *popPtr, int POPS, int INDS);             // These are fu
 void printLocus(locus Locus);               // These are function prototypes
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
 double make_genos(double geno_value, double allelic_stdev);
-
+double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=0.5);
 
 
 
@@ -136,12 +136,13 @@ int main(int argc, char *argv[])
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
 
     // Initialize the populations:
+    // Genotypes:
     Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2, allelic_Stdev); // TO DO: remove hard-coded variances in random normal generation
-    
+    // Phenotypes:
     Pop.initilizeXYs();
-    
     Pop.getPheno(theta, gamma, *mod);
     
+    double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=0.5);
     
     // Recursion:
     for(int g=0; g<num_generations; g++){
@@ -149,7 +150,7 @@ int main(int argc, char *argv[])
     
 //    Pop.getPheno(theta, gamma, *mod);
         
-        Pop.printPop();             // Troubleshooting: print populations
+//        Pop.printPop();             // Troubleshooting: print populations
         // Need selection
         
         // Need mutation
@@ -1091,27 +1092,6 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
 
 }
 
-    
-
-
-
-
-//void Populations::deletePop()
-//{
-//    for(int p=0; p<numPops; p++){
-//        for(int i=0;i<numInd;i++){
-//            for(int c=0;c<numLoci;c++){
-//                delete[] pop[p][i][c];
-//            }
-//            delete[] pop[p][i];
-//        }
-//        delete[] pop[p];
-//    }
-//    delete[] pop;
-//}
-//
-
-
 
 void Populations::printPop()
 {
@@ -1829,7 +1809,10 @@ double make_genos(double geno_value, double allelic_stdev)
     return dist(e2);
 }
 
-
+double getFitness(double xx, double yy, double xopt, double yopt, double om11, double om12)
+{
+    return 3.1;
+}
 
 
 
