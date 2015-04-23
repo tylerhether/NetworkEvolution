@@ -22,14 +22,11 @@
 #include <fstream>
 #include <cstdlib> // allows us to halt with exit() function and use things like atoi
 #include <random>
-#include "./armadillo" // Needed for matrix alg. Assumes armadillo header is in same directory as main.cp
+//#include "./armadillo" // Needed for matrix alg. Assumes armadillo header is in same directory as main.cp
 //#include <armadillo> // Path not needed for command-line compiling
 
 using namespace std; // This let's you use the shorthand the std library's functions
-using namespace arma;
-
-
-
+//using namespace arma;
 
 
 //Clasess and Strcutures
@@ -158,7 +155,7 @@ int main(int argc, char *argv[])
     // Fitness:
     Pop.getFitness();
 //            num_generations = num_generations + 1 -1;
-//        Pop.printPop();             // Troubleshooting: print populations
+        Pop.printPop();             // Troubleshooting: print populations
         // Need selection
         
         // Need mutation
@@ -1118,19 +1115,58 @@ void Populations::getFitness()
 void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W)
 {
     
-    mat zMinusZopt = zeros<mat>(2,1);
-    zMinusZopt.row(0).col(0) = xx - xopt;
-    zMinusZopt.row(1).col(0) = yy - yopt;
     
-    mat Omega = zeros<mat>(2,2);
-    Omega.row(0).col(0) = om11;
-    Omega.row(1).col(0) = om12;
-    Omega.row(0).col(1) = om12;
-    Omega.row(1).col(1) = om11;
+//    A <- matrix(c(100,50,50,100), 2,2)
+//    A
+//    solve(A)
+    double a(om11);
+    double b(om12);
+    double c(om12);
+    double d(om11);
     
-    mat Wmat = zeros<mat>(1,1);
-    Wmat = exp(-0.5*(zMinusZopt.t()*inv(Omega)*zMinusZopt));
-    W = accu(Wmat);
+    double tmp;
+    tmp = 1/(a*d -b*c);
+    double OmegaInv[2][2];
+    OmegaInv[0][0] = tmp*d;
+    OmegaInv[0][1] = tmp*-b;
+    OmegaInv[1][0] = tmp*-c;
+    OmegaInv[1][1] = tmp*a;
+    
+    double dx(xx - xopt);
+    double dy(yy - yopt);
+    
+    double r(OmegaInv[0][0]*dx + OmegaInv[1][0]*dy);
+    
+    double s(OmegaInv[0][1]*dx + OmegaInv[1][1]*dy);
+    
+    W = exp(-0.5*(r*dx + s*dy));
+    
+//    double ZMINUSZOPT[2][1];
+//    ZMINUSOPT
+//    a <- 100; b <- 40; c <- 20; d<-80
+//    A <- matrix(c(a,b,c,d), 2, 2, byrow=TRUE)
+//    solve(A)
+//#B <- ()%*%
+//    B <- (1/(a*d - b*c))%*%matrix(c(d, -b, -c, a), 2, 2, byrow=TRUE)
+//    B <- (1/(a*d - b*c))*matrix(c(d, -b, -c, a), 2, 2, byrow=TRUE)
+//    B
+//    history(100)
+//    
+
+    
+//    mat zMinusZopt = zeros<mat>(2,1);
+//    zMinusZopt.row(0).col(0) = xx - xopt;
+//    zMinusZopt.row(1).col(0) = yy - yopt;
+//    
+//    mat Omega = zeros<mat>(2,2);
+//    Omega.row(0).col(0) = om11;
+//    Omega.row(1).col(0) = om12;
+//    Omega.row(0).col(1) = om12;
+//    Omega.row(1).col(1) = om11;
+//    
+//    mat Wmat = zeros<mat>(1,1);
+//    Wmat = exp(-0.5*(zMinusZopt.t()*inv(Omega)*zMinusZopt));
+//    W = accu(Wmat);
     
     //    return W;
 }
