@@ -10,3 +10,11 @@ To simulate:
 
 Example:
 ./simulation 3 100 200 300 1122 300 1 'B' 100 200
+
+
+For random number generation C++11 is required
+
+For multiplying matrices the Armadillo library is used. Download library at
+http://arma.sourceforge.net/download.html and follow instructions there to install. 
+
+Once installed. Place all the contents of the include directory in the same directory as main.cp
