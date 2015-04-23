@@ -27,6 +27,11 @@
 
 using namespace std; // This let's you use the shorthand the std library's functions
 using namespace arma;
+
+
+
+
+
 //Clasess and Strcutures
 struct locus                                    // Initialize the locus structure
 {
@@ -68,6 +73,11 @@ public:
     void getPheno(double theta, double gamma, char mod);
     void geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY);
     
+    
+    // Get Fitness
+    void getFitness();
+    void pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W);
+    
     // Destroy Populations.
     ~Populations() // destructor
     {
@@ -92,7 +102,7 @@ void input(Populations *popPtr, int POPS, int INDS);             // These are fu
 void printLocus(locus Locus);               // These are function prototypes
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
 double make_genos(double geno_value, double allelic_stdev);
-double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=0.5);
+double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=500);
 
 
 
@@ -135,21 +145,19 @@ int main(int argc, char *argv[])
     // Find the genotypic values that make the starting two-trait phenotype
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
 
-    // Initialize the populations:
-    // Genotypes:
+    // Initialize the populations by their...
+    // ...Genotypes:
     Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2, allelic_Stdev); // TO DO: remove hard-coded variances in random normal generation
-    // Phenotypes:
+    // ...Phenotypes:
     Pop.initilizeXYs();
     Pop.getPheno(theta, gamma, *mod);
     
-    double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=0.5);
-    
     // Recursion:
-    for(int g=0; g<num_generations; g++){
+        for(int g=0; g<num_generations; g++){
 
-    
-//    Pop.getPheno(theta, gamma, *mod);
-        
+    // Fitness:
+    Pop.getFitness();
+//            num_generations = num_generations + 1 -1;
 //        Pop.printPop();             // Troubleshooting: print populations
         // Need selection
         
@@ -267,7 +275,6 @@ void Populations::getPheno(double theta, double gamma, char mod)
         }
 }
 
-    
 void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY)
 {
 //    cout << "model is: " << mod << endl;
@@ -1092,6 +1099,41 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
 
 }
 
+void Populations::getFitness()
+{
+    for(int p=0; p<numPops; p++){
+        for(int i=0; i<numInd; i++){
+            pheno_to_fitness(xys[p][i].xx,
+                             xys[p][i].yy,
+                             300,
+                             300,
+                             1000,
+                             500,
+                             xys[p][i].ww);
+//            cout << xys[p][i].ww << endl;
+        }
+    }
+}
+
+void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W)
+{
+    
+    mat zMinusZopt = zeros<mat>(2,1);
+    zMinusZopt.row(0).col(0) = xx - xopt;
+    zMinusZopt.row(1).col(0) = yy - yopt;
+    
+    mat Omega = zeros<mat>(2,2);
+    Omega.row(0).col(0) = om11;
+    Omega.row(1).col(0) = om12;
+    Omega.row(0).col(1) = om12;
+    Omega.row(1).col(1) = om11;
+    
+    mat Wmat = zeros<mat>(1,1);
+    Wmat = exp(-0.5*(zMinusZopt.t()*inv(Omega)*zMinusZopt));
+    W = accu(Wmat);
+    
+    //    return W;
+}
 
 void Populations::printPop()
 {
@@ -1099,7 +1141,7 @@ void Populations::printPop()
         for(int i=0; i<numInd; i++){
             for(int c=0;c<numLoci;c++){
                 for(int l=0; l<numAlleles;l++){
-                    cout<< "Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << endl;
+                    cout<< "Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << "\tw=" << xys[p][i].ww << endl;
                 }
 //                cout<<endl;
             }
@@ -1807,11 +1849,6 @@ double make_genos(double geno_value, double allelic_stdev)
     
 //    cout << "Here's the result: " <<  dist(e2) << endl;
     return dist(e2);
-}
-
-double getFitness(double xx, double yy, double xopt, double yopt, double om11, double om12)
-{
-    return 3.1;
 }
 
 

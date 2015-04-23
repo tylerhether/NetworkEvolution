@@ -113,6 +113,21 @@
          <EnvironmentVariable
             key = "larmadillo"
             value = ""
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "I"
+            value = "./"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "framework"
+            value = "Accelerate"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "DARMA_DONT_USE_WRAPPER"
+            value = ""
             isEnabled = "YES">
          </EnvironmentVariable>
          <EnvironmentVariable
