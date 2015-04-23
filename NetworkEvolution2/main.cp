@@ -44,6 +44,14 @@ struct phenotypes
     double ww;                                  // Individual's fitness
 };
 
+struct optima
+{
+    double x_opt;                               // Trait 1's optimum value
+    double y_opt;                               // Trait 2's optimum value
+    double om11;                                // variance in stabilizing selection
+    double om12;                                // covariance in stabilizing selection
+};
+
 class Populations                            // Initialize the population class
 {
 //private:                                  // Shouldn't we have some private members?
@@ -70,10 +78,16 @@ public:
     void getPheno(double theta, double gamma, char mod);
     void geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY);
     
-    
     // Get Fitness
     void getFitness();
     void pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W);
+    
+    // Intialize Optima
+    optima* opts;
+    void initializeOPTIMA(double xxx, double yyy, double omm11, double omm12);
+    
+    
+    
     
     // Destroy Populations.
     ~Populations() // destructor
@@ -108,10 +122,11 @@ int main(int argc, char *argv[])
 {
 
     // Pull in command line arguments
-    if (argc != 11) {
+    if (argc != 15) {
         // Inform the user of how to use the program if not entered in correctly
-        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations> <allelic_stdev>\n";
+        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations> <allelic_stdev> <xopts> <yopts> <om11> <om12>\n";
         std::cout << argc-1 << " given" << endl;
+        std::cout << "Be sure that the number of optima correspond to the number of populations" << endl;
         exit(0);
     }
     
@@ -125,15 +140,14 @@ int main(int argc, char *argv[])
     char *mod = argv[8];                        // model used: 'A' or 'B'
     int num_generations(atoi(argv[9]));         // Number of generations to simulate
     double allelic_Stdev(atoi(argv[10]));       // Initial standard dev. of allelic values to seed standing genetic variation
+    double XOPT(atoi(argv[11]));                // Trait 1 optimum
+    double YOPT(atoi(argv[12]));                // Trait 2 optimum
+    double OM11(atoi(argv[13]));                // Variance in stabilizing selection (for all pops)
+    double OM12(atoi(argv[14]));                // Covariance in stabilizing selection (for all pops)
     
-    
-    
-    
-    
-//    srand((unsigned int)time(NULL));        // Seeding Random
-    Populations Pop;                     // Initialize Populations
-    
+    //
     // Running:
+    Populations Pop;
     input(&Pop, numPops, numInds);
 
     // Initialize genotypic values. These will be updated in the next function.
@@ -145,9 +159,13 @@ int main(int argc, char *argv[])
     // Initialize the populations by their...
     // ...Genotypes:
     Pop.initilizePop(reg_pattern, theta, gamma, *mod, a1, a2, allelic_Stdev); // TO DO: remove hard-coded variances in random normal generation
+   
     // ...Phenotypes:
     Pop.initilizeXYs();
     Pop.getPheno(theta, gamma, *mod);
+    
+    Pop.initializeOPTIMA(XOPT, YOPT, OM11, OM12);
+    //
     
     // Recursion:
         for(int g=0; g<num_generations; g++){
@@ -240,6 +258,17 @@ void Populations::initilizeXYs()
     }
 }
 
+void Populations::initializeOPTIMA(double xxx, double yyy, double omm11, double omm12)
+{
+    opts=new optima[numPops];
+    for(int p=0; p<numPops; p++){
+
+            opts[p].x_opt = xxx;
+            opts[p].y_opt = yyy;
+            opts[p].om11 = omm11;
+            opts[p].om12 = omm12;
+    }
+}
 
 void Populations::getPheno(double theta, double gamma, char mod)
 {
@@ -1102,12 +1131,12 @@ void Populations::getFitness()
         for(int i=0; i<numInd; i++){
             pheno_to_fitness(xys[p][i].xx,
                              xys[p][i].yy,
-                             300,
-                             300,
-                             1000,
-                             500,
+                             opts[p].x_opt,
+                             400, //opts[p].y_opt,
+                             10000, //opts[p].om11,
+                             5000, //opts[p].om12,
                              xys[p][i].ww);
-//            cout << xys[p][i].ww << endl;
+//            cout << opts[p].x_opt << endl;
         }
     }
 }
@@ -1140,35 +1169,7 @@ void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yop
     double s(OmegaInv[0][1]*dx + OmegaInv[1][1]*dy);
     
     W = exp(-0.5*(r*dx + s*dy));
-    
-//    double ZMINUSZOPT[2][1];
-//    ZMINUSOPT
-//    a <- 100; b <- 40; c <- 20; d<-80
-//    A <- matrix(c(a,b,c,d), 2, 2, byrow=TRUE)
-//    solve(A)
-//#B <- ()%*%
-//    B <- (1/(a*d - b*c))%*%matrix(c(d, -b, -c, a), 2, 2, byrow=TRUE)
-//    B <- (1/(a*d - b*c))*matrix(c(d, -b, -c, a), 2, 2, byrow=TRUE)
-//    B
-//    history(100)
-//    
 
-    
-//    mat zMinusZopt = zeros<mat>(2,1);
-//    zMinusZopt.row(0).col(0) = xx - xopt;
-//    zMinusZopt.row(1).col(0) = yy - yopt;
-//    
-//    mat Omega = zeros<mat>(2,2);
-//    Omega.row(0).col(0) = om11;
-//    Omega.row(1).col(0) = om12;
-//    Omega.row(0).col(1) = om12;
-//    Omega.row(1).col(1) = om11;
-//    
-//    mat Wmat = zeros<mat>(1,1);
-//    Wmat = exp(-0.5*(zMinusZopt.t()*inv(Omega)*zMinusZopt));
-//    W = accu(Wmat);
-    
-    //    return W;
 }
 
 void Populations::printPop()
