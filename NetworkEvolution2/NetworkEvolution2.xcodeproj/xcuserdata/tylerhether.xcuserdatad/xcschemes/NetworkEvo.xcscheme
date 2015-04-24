@@ -100,23 +100,23 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "20"
+            argument = "10"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "100"
+            argument = "300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "159"
+            argument = "300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "1000"
+            argument = "10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "500"
+            argument = "5000"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

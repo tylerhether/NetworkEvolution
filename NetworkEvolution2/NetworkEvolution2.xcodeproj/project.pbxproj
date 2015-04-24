@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7BDBA5971AE6FCD100A34228 /* main.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7BDBA5961AE6FCD100A34228 /* main.cp */; };
+		7B886CA21AEAAF51007C779D /* main.cp in Sources */ = {isa = PBXBuildFile; fileRef = 7B886CA11AEAAF51007C779D /* main.cp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,8 +23,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		7BDBA5961AE6FCD100A34228 /* main.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cp; sourceTree = SOURCE_ROOT; };
-		7BDBA5981AE6FCEF00A34228 /* Input.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Input.txt; sourceTree = SOURCE_ROOT; };
+		7B886CA11AEAAF51007C779D /* main.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cp; sourceTree = SOURCE_ROOT; };
 		7BFF3C8B1AE6FC2700965291 /* NetworkEvo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = NetworkEvo; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -58,8 +57,7 @@
 		7BFF3C8D1AE6FC2700965291 /* NetworkEvo */ = {
 			isa = PBXGroup;
 			children = (
-				7BDBA5981AE6FCEF00A34228 /* Input.txt */,
-				7BDBA5961AE6FCD100A34228 /* main.cp */,
+				7B886CA11AEAAF51007C779D /* main.cp */,
 			);
 			path = NetworkEvo;
 			sourceTree = "<group>";
@@ -119,7 +117,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7BDBA5971AE6FCD100A34228 /* main.cp in Sources */,
+				7B886CA21AEAAF51007C779D /* main.cp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
