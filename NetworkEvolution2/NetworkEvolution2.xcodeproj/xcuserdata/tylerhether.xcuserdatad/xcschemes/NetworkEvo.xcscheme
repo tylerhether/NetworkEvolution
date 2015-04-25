@@ -64,59 +64,59 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "2"
+            argument = "-p 2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "5"
+            argument = "-i 5"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "200"
+            argument = "-x 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "300"
+            argument = "-y 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "1122"
+            argument = "-n 1122"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "300"
+            argument = "-t 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "1"
+            argument = "-g 1"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "&apos;B&apos;"
+            argument = "-m &apos;B&apos;"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "2000"
+            argument = "-G 2000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "10"
+            argument = "-d 1"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "300"
+            argument = "-X 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "300"
+            argument = "-Y 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "10000"
+            argument = "-s 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "5000"
+            argument = "-S 5000"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

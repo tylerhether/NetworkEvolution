@@ -116,28 +116,129 @@ int main(int argc, char *argv[])
 {
     
     // Pull in command line arguments
-    if (argc != 15) {
-        // Inform the user of how to use the program if not entered in correctly
-        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations> <allelic_stdev> <xopts> <yopts> <om11> <om12>\n";
-        std::cout << argc-1 << " given" << endl;
-        std::cout << "Be sure that the number of optima correspond to the number of populations" << endl;
-        exit(0);
+//    if (argc != 15) {
+//        // Inform the user of how to use the program if not entered in correctly
+//        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations> <allelic_stdev> <xopts> <yopts> <om11> <om12>\n";
+//        std::cout << argc-1 << " given" << endl;
+//        std::cout << "Be sure that the number of optima correspond to the number of populations" << endl;
+//        exit(0);
+//    }
+//    
+
+    
+    int numPops(0);
+    int numInds(1);
+    double x1(1);
+    double x2(1);
+    char* reg_pattern;
+    double theta(300);
+    double gamma(1);
+    char *mod;
+    int num_generations(1);
+    double allelic_Stdev(1);
+    double XOPT(300);                // Trait 1 optimum
+    double YOPT(300);                // Trait 2 optimum
+    double OM11(10000);                // Variance in stabilizing selection (for all pops)
+    double OM12(0);
+    
+//
+    cout << "Number of arguments provided = " << (argc-1)/2 << endl;
+    for(int i=1; i<argc; i++){
+        if(string(argv[i]) == "-p"){
+            cout << "# number of pops = " << argv[i+1] << endl;
+            numPops = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-i"){
+            cout << "# number of individuals = " << argv[i+1] << endl;
+            numInds = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-x"){
+            cout << "Initial mean trait x value = " << argv[i+1] << endl;
+            x1 = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-y"){
+            cout << "Initial mean trait y value = " << argv[i+1] << endl;
+            x2 = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-n"){
+            cout << "Initial network architecture = " << argv[i+1] << endl;
+            reg_pattern = argv[i+1];
+        }
+        if(string(argv[i]) == "-t"){
+            cout << "theta = " << argv[i+1] << endl;
+            theta = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-g"){
+            cout << "gamma = " << argv[i+1] << endl;
+            theta = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-m"){
+            cout << "Regulatory model = " << argv[i+1] << endl;
+            mod = argv[i+1];
+        }
+        if(string(argv[i]) == "-G"){
+            cout << "# of Generations = " << argv[i+1] << endl;
+            num_generations = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-d"){
+            cout << "Initial standard deviation of allelic values = " << argv[i+1] << endl;
+            allelic_Stdev = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-X"){
+            cout << "Triat 1's optimum = " << argv[i+1] << endl;
+            XOPT = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-Y"){
+            cout << "Trait 2's optimum = " << argv[i+1] << endl;
+            YOPT = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-s"){
+            cout << "Variance in stabilizing selection = " << argv[i+1] << endl;
+            OM11 = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-S"){
+            cout << "Covariance in stabilizing selection = " << argv[i+1] << endl;
+            OM11 = atoi(argv[i+1]);
+        }
+        
     }
     
-    int numPops(atoi(argv[1]));                 // Number of Populations
-    int numInds(atoi(argv[2]));                 // Number of Individuals per population
-    double x1(atoi(argv[3]));                   // Initial mean trait value for trait # 1
-    double x2(atoi(argv[4]));                   // Initial mean trait value for trait # 2
-    char* reg_pattern = argv[5];                // r11, r12, r21, r22 where rij is the reg allele for locus i and allele j
-    double theta(atoi(argv[6]));                // Theta value for network regulation
-    double gamma(atoi(argv[7]));                // gamma (decay) rate for network regulation
-    char *mod = argv[8];                        // model used: 'A' or 'B'
-    int num_generations(atoi(argv[9]));         // Number of generations to simulate
-    double allelic_Stdev(atoi(argv[10]));       // Initial standard dev. of allelic values to seed standing genetic variation
-    double XOPT(atoi(argv[11]));                // Trait 1 optimum
-    double YOPT(atoi(argv[12]));                // Trait 2 optimum
-    double OM11(atoi(argv[13]));                // Variance in stabilizing selection (for all pops)
-    double OM12(atoi(argv[14]));                // Covariance in stabilizing selection (for all pops)
+    
+//    int numPops(atoi(argv[1]));                 // Number of Populations
+//    int numInds(atoi(argv[3]));                 // Number of Individuals per population
+//    double x1(atoi(argv[4]));                   // Initial mean trait value for trait # 1
+//    double x2(atoi(argv[5]));                   // Initial mean trait value for trait # 2
+//    char* reg_pattern = argv[6];                // r11, r12, r21, r22 where rij is the reg allele for locus i and allele j
+//    double theta(atoi(argv[7]));                // Theta value for network regulation
+//    double gamma(atoi(argv[8]));                // gamma (decay) rate for network regulation
+//    char *mod = argv[9];                        // model used: 'A' or 'B'
+//    int num_generations(atoi(argv[10]));         // Number of generations to simulate
+//    double allelic_Stdev(atoi(argv[11]));       // Initial standard dev. of allelic values to seed standing genetic variation
+//    double XOPT(atoi(argv[12]));                // Trait 1 optimum
+//    double YOPT(atoi(argv[13]));                // Trait 2 optimum
+//    double OM11(atoi(argv[14]));                // Variance in stabilizing selection (for all pops)
+//    double OM12(atoi(argv[15]));                // Covariance in stabilizing selection (for all pops)
+    
+    
+//    int numPops(atoi(argv[1]));                 // Number of Populations
+//    int numInds(atoi(argv[2]));                 // Number of Individuals per population
+//    double x1(atoi(argv[3]));                   // Initial mean trait value for trait # 1
+//    double x2(atoi(argv[4]));                   // Initial mean trait value for trait # 2
+//    char* reg_pattern = argv[5];                // r11, r12, r21, r22 where rij is the reg allele for locus i and allele j
+//    double theta(atoi(argv[6]));                // Theta value for network regulation
+//    double gamma(atoi(argv[7]));                // gamma (decay) rate for network regulation
+//    char *mod = argv[8];                        // model used: 'A' or 'B'
+//    int num_generations(atoi(argv[9]));         // Number of generations to simulate
+//    double allelic_Stdev(atoi(argv[10]));       // Initial standard dev. of allelic values to seed standing genetic variation
+//    double XOPT(atoi(argv[11]));                // Trait 1 optimum
+//    double YOPT(atoi(argv[12]));                // Trait 2 optimum
+//    double OM11(atoi(argv[13]));                // Variance in stabilizing selection (for all pops)
+//    double OM12(atoi(argv[14]));                // Covariance in stabilizing selection (for all pops)
+//    
+    
+    
+    
+    
     
     //
     // Running:
@@ -167,7 +268,7 @@ int main(int argc, char *argv[])
         // Fitness:
         Pop.getFitness();
         //            num_generations = num_generations + 1 -1;
-        //        Pop.printPop();             // Troubleshooting: print populations
+                Pop.printPop();             // Troubleshooting: print populations
         // Need selection
         
         // Need mutation
@@ -175,6 +276,8 @@ int main(int argc, char *argv[])
         // Need mating
         
         // Need migration
+        
+        // Need to estimate hybrid fitness
         
         // Need output summary stats to file
         
@@ -217,11 +320,11 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
                     // Need to make genotype for the individual
                     
                     if(c==0){
-                        pop[p][i][c][l].coding=a1+make_genos(a1/numAlleles, allelic_Stdev);
+                        pop[p][i][c][l].coding=a1/numAlleles+make_genos(a1/numAlleles, allelic_Stdev);
                         pop[p][i][c][l].regulatory=static_cast<char>(reg_pattern[counter]);
                     }
                     if(c==1){
-                        pop[p][i][c][l].coding=a2+make_genos(a2/numAlleles, allelic_Stdev);
+                        pop[p][i][c][l].coding=a2/numAlleles+make_genos(a2/numAlleles, allelic_Stdev);
                         pop[p][i][c][l].regulatory=static_cast<char>(reg_pattern[counter]);
                     }
                     counter++;
