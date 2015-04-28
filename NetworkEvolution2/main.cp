@@ -58,8 +58,9 @@ public:
     locus**** pop;
     
     // Initialize variables that will make numPops populations
-    int numPops,numInd,numLoci,numAlleles;
-    
+    int numPops,numInd,numLoci,numAlleles; // AS = after selection
+    int *numIndAS;//[10];
+
     // Start with a NULL population
     Populations();
     
@@ -84,6 +85,14 @@ public:
     optima* opts;
     void initializeOPTIMA(double xxx, double yyy, double omm11, double omm12);
     
+    // For selection:
+    locus**** pop_after_selection;
+//    int nIndAS[];
+    void selection();
+    
+    
+    // For Recobmining, mutating, and mating:
+    void recombine_mutate_matePop(int recomb_array[], int rolls);
     
     // For cleaning up.
     void deletePops_XYs();
@@ -109,37 +118,28 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
 double make_genos(double geno_value, double allelic_stdev);
 double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=500);
 
-
-
 // Main Function to run:
 int main(int argc, char *argv[])
 {
     
-    // Pull in command line arguments
-//    if (argc != 15) {
-//        // Inform the user of how to use the program if not entered in correctly
-//        std::cout << "Usage is <num_pops> <num_individuals> <initial_x> <initial_y> <initial_reg_pattern> <theta> <gamma> <model> <num_generations> <allelic_stdev> <xopts> <yopts> <om11> <om12>\n";
-//        std::cout << argc-1 << " given" << endl;
-//        std::cout << "Be sure that the number of optima correspond to the number of populations" << endl;
-//        exit(0);
-//    }
-//    
-
+    // Seed random numbers
+    srand((unsigned int)time(NULL));
     
     int numPops(0);
     int numInds(1);
     double x1(1);
     double x2(1);
-    char* reg_pattern;
+    char* reg_pattern = nullptr;
     double theta(300);
     double gamma(1);
-    char *mod;
+    char *mod = nullptr;
     int num_generations(1);
     double allelic_Stdev(1);
     double XOPT(300);                // Trait 1 optimum
     double YOPT(300);                // Trait 2 optimum
     double OM11(10000);                // Variance in stabilizing selection (for all pops)
     double OM12(0);
+    double rec(0.5);                  // This is the recombination rate between coding loci
     
 //
     cout << "Number of arguments provided = " << (argc-1)/2 << endl;
@@ -198,43 +198,62 @@ int main(int argc, char *argv[])
         }
         if(string(argv[i]) == "-S"){
             cout << "Covariance in stabilizing selection = " << argv[i+1] << endl;
-            OM11 = atoi(argv[i+1]);
+            OM12 = atoi(argv[i+1]);
+        }
+        if(string(argv[i]) == "-r"){
+            cout << "Recombination rate = " << argv[i+1] << endl;
+            rec = static_cast<double>(atoi(argv[i+1]))/100;
         }
         
     }
     
+    // Generate a random sequence of 1s and 0s for recombination:
     
-//    int numPops(atoi(argv[1]));                 // Number of Populations
-//    int numInds(atoi(argv[3]));                 // Number of Individuals per population
-//    double x1(atoi(argv[4]));                   // Initial mean trait value for trait # 1
-//    double x2(atoi(argv[5]));                   // Initial mean trait value for trait # 2
-//    char* reg_pattern = argv[6];                // r11, r12, r21, r22 where rij is the reg allele for locus i and allele j
-//    double theta(atoi(argv[7]));                // Theta value for network regulation
-//    double gamma(atoi(argv[8]));                // gamma (decay) rate for network regulation
-//    char *mod = argv[9];                        // model used: 'A' or 'B'
-//    int num_generations(atoi(argv[10]));         // Number of generations to simulate
-//    double allelic_Stdev(atoi(argv[11]));       // Initial standard dev. of allelic values to seed standing genetic variation
-//    double XOPT(atoi(argv[12]));                // Trait 1 optimum
-//    double YOPT(atoi(argv[13]));                // Trait 2 optimum
-//    double OM11(atoi(argv[14]));                // Variance in stabilizing selection (for all pops)
-//    double OM12(atoi(argv[15]));                // Covariance in stabilizing selection (for all pops)
+    cout << "Building recombination sequences";
+    
+    int nrolls=numPops*numInds*num_generations < 50000 ? numPops*numInds*num_generations : 50000; // Is this enough?
+    cout << " with " << nrolls << " elements." << endl;
+    int *mRecombinationArray = new int[nrolls];
+    int *mRecombinationArray2 = new int[nrolls];
+//    int mRecombinationArray2[nrolls] = { 0 };
+    random_device generator;
+    mt19937 e2(generator());
+
+    bernoulli_distribution distribution(rec);
+    
+    for (int i=0; i<nrolls; i++){
+        
+        if (distribution(generator)){
+            
+            mRecombinationArray[i]=1;
+//             cout << mRecombinationArray[i] << " " << endl;
+        } else {
+            mRecombinationArray[i]=0;
+//             cout << mRecombinationArray[i] << endl;
+        }
+    }
+    
+    for(int i=0; i<nrolls; i++){
+        int sum(0);
+        for(int j=0; j<i; j++){
+            sum+=mRecombinationArray[j];
+        }
+        mRecombinationArray2[i] = sum % 2;
+    }
+    
+    for(int i=0; i<nrolls; i++){
+        cout << mRecombinationArray[i] << "\t" << mRecombinationArray2[i] << endl;
+    }
+    
+
+    
+
     
     
-//    int numPops(atoi(argv[1]));                 // Number of Populations
-//    int numInds(atoi(argv[2]));                 // Number of Individuals per population
-//    double x1(atoi(argv[3]));                   // Initial mean trait value for trait # 1
-//    double x2(atoi(argv[4]));                   // Initial mean trait value for trait # 2
-//    char* reg_pattern = argv[5];                // r11, r12, r21, r22 where rij is the reg allele for locus i and allele j
-//    double theta(atoi(argv[6]));                // Theta value for network regulation
-//    double gamma(atoi(argv[7]));                // gamma (decay) rate for network regulation
-//    char *mod = argv[8];                        // model used: 'A' or 'B'
-//    int num_generations(atoi(argv[9]));         // Number of generations to simulate
-//    double allelic_Stdev(atoi(argv[10]));       // Initial standard dev. of allelic values to seed standing genetic variation
-//    double XOPT(atoi(argv[11]));                // Trait 1 optimum
-//    double YOPT(atoi(argv[12]));                // Trait 2 optimum
-//    double OM11(atoi(argv[13]));                // Variance in stabilizing selection (for all pops)
-//    double OM12(atoi(argv[14]));                // Covariance in stabilizing selection (for all pops)
-//    
+    
+    
+    
+    
     
     
     
@@ -262,29 +281,40 @@ int main(int argc, char *argv[])
     Pop.initializeOPTIMA(XOPT, YOPT, OM11, OM12);
     //
     
+    Pop.getFitness();
+    Pop.printPop();
     // Recursion:
     for(int g=0; g<num_generations; g++){
         
+        if(g % 100 == 0){
+            cout << "Generation " << g << endl;
+        }
+        // Get new phenotypes
+        Pop.getPheno(theta, gamma, *mod);
         // Fitness:
         Pop.getFitness();
         //            num_generations = num_generations + 1 -1;
-                Pop.printPop();             // Troubleshooting: print populations
+                             // Troubleshooting: print populations
         // Need selection
-        
+       
         // Need mutation
-        
+        Pop.recombine_mutate_matePop(mRecombinationArray2, nrolls);
+//        Pop.getPheno(theta, gamma, *mod);
+//        Pop.getFitness();
         // Need mating
-        
+
         // Need migration
         
         // Need to estimate hybrid fitness
         
         // Need output summary stats to file
-        
+        Pop.selection();
         
     }
     
+
     
+//     Pop.printPop();
     // Cleaning up:
 //    Pop.deletePops_XYs();
    
@@ -292,7 +322,8 @@ int main(int argc, char *argv[])
      * if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
      * else if( __cplusplus == 199711L ) std::cout << "C++98\n" ;
      * else std::cout << "pre-standard C++\n" ;*/
-    
+    delete[] mRecombinationArray;
+    delete[] mRecombinationArray2;
     return 0;
 }
 
@@ -307,14 +338,21 @@ Populations::Populations()
 
 void Populations::initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2, double allelic_Stdev)
 {
+    numIndAS=new int[numPops];
+    
     pop=new locus***[numPops];
+    pop_after_selection=new locus***[numPops];
     for(int p=0; p<numPops; p++){
+        numIndAS[p]=0;
         pop[p]=new locus**[numInd];
+        pop_after_selection[p]=new locus**[numInd];
         for(int i=0; i<numInd; i++){
             pop[p][i]=new locus*[numLoci];
+            pop_after_selection[p][i]=new locus*[numLoci];
             int counter(0);
             for(int c=0;c<numLoci;c++){
                 pop[p][i][c]=new locus[numAlleles];
+                pop_after_selection[p][i][c]=new locus[numAlleles];
                 
                 for(int l=0; l<numAlleles;l++){
                     // Need to make genotype for the individual
@@ -331,14 +369,12 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
                     if(counter==4){
                         counter=0;
                     }
-                    
-                    //                    pop[p][i][c][l].coding=gamma;           // Seed coding allele expression
-                    //                    pop[p][i][c][l].regulatory=rand() % 3; // Seed regulatory allele
+                    pop_after_selection[p][i][c][l].coding = 0;
+                    pop_after_selection[p][i][c][l].regulatory = "1";
                 }
             }
         }
     }
-    
 }
 
 void Populations::initilizeXYs()
@@ -364,16 +400,21 @@ void Populations::deletePops_XYs()
             for(int c=0; c<numLoci; c++)
             {
                 delete[] pop[p][i][c];
+                delete[] pop_after_selection[p][i][c];
             }
             delete pop[p][i];
-
+            delete pop_after_selection[p][i];
         }
         delete pop[p];
         delete xys[p];
+        delete pop_after_selection[p];
+//        delete numIndAS;
     }
     delete pop;
+    delete pop_after_selection;
     delete xys;
     delete opts;
+    delete[] numIndAS;
 }
 
 
@@ -1263,23 +1304,17 @@ void Populations::getFitness()
 void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W)
 {
     
-    
-    //    A <- matrix(c(100,50,50,100), 2,2)
-    //    A
-    //    solve(A)
-    double a(om11);
-    double b(om12);
-    double c(om12);
-    double d(om11);
-    
+    double a = om11;
+    double b = om12;
+    double c = om12;
+    double d = om11;
     double tmp;
-    tmp = 1/(a*d -b*c);
+    tmp = 1.0/(a*d -b*c);
     double OmegaInv[2][2];
     OmegaInv[0][0] = tmp*d;
     OmegaInv[0][1] = tmp*-b;
     OmegaInv[1][0] = tmp*-c;
     OmegaInv[1][1] = tmp*a;
-    
     double dx(xx - xopt);
     double dy(yy - yopt);
     
@@ -1289,7 +1324,41 @@ void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yop
     
     W = exp(-0.5*(r*dx + s*dy));
     
+ 
 }
+
+void Populations::selection(){
+    for(int p=0; p<numPops; p++){
+        numIndAS[p]=0;
+        for(int i=0; i<numInd; i++){
+            
+            if(rand()/static_cast<double>(RAND_MAX)<xys[p][i].ww){ // Individual lives
+         
+                for(int c=0; c<numLoci; c++){
+                    for(int a=0; a<numAlleles; a++){
+                        // Put the surviving individual in the after selection bin:
+                        pop_after_selection[p][numIndAS[p]][c][a].coding = pop[p][i][c][a].coding;
+                        pop_after_selection[p][numIndAS[p]][c][a].regulatory = pop[p][i][c][a].regulatory;
+                    }
+                }
+                numIndAS[p]++; // Keeps track of the number of individuals that survived selection
+            }
+            if(numIndAS[p]==0){ // If one population went extinct then a hole is torn in the universe.
+                cout << "Wait, selection killed off all of population #"<< p << ". Aborting simulation now.\nConsider weaker selection or larger number of individuals." << endl;
+                exit(1);
+            }
+            // Enhancement: check to make sure that the average fitness of the non-surviving individuals < w of surving inds.
+        }
+        // Debugging:
+//        cout << "The number of individuals retained in population " << p << " = " << numIndAS[p] << endl;
+    }
+
+    
+    
+    
+}
+
+
 
 void Populations::printPop()
 {
@@ -1306,6 +1375,140 @@ void Populations::printPop()
     }
 }
 
+
+
+
+
+
+
+
+void Populations::recombine_mutate_matePop(int recomb_array[], int rolls)
+{
+
+}
+
+
+
+
+
+
+//
+//
+//void Populations::recombine_mutate_matePop(int recomb_array[], int rolls)
+//{
+//    
+//
+//    /* Here is the random number generator that samples the starting position
+//     * of the recombination array (2) */
+//    random_device rd;
+//    mt19937 gen(rd());
+//    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
+////    for (int n=0; n<1000; ++n)            // For troubleshooting:
+////        std::cout << dis(gen) << ' ';     // This block prints out the random integers
+////    std::cout << '\n';
+////    
+//    
+////    uniform_int_distribution<> pick_pairs(0, 20);
+////    for (int n=0; n<1000; ++n)            // For troubleshooting:
+////        std::cout << pick_pairs(gen) << ' ';     // This block prints out the random integers
+////    std::cout << '\n';
+////    
+//
+//
+//    /* So for each population we need to mate the surviving individuals at random.
+//     * The number of surviving individuals for each p populations is in the integer
+//     * array 'numIndAS' */
+//    for(int p=0; p<numPops; p++)
+//    {
+//        // Tailor the unif dist based on # survivers in population p
+//        uniform_int_distribution<> pick_pairs(0, (numIndAS[p]-1)); cout << "The total number of individuals in pop " << p << " are " << numIndAS[p] << endl;
+//        
+//        
+//        // Pick the starting index of the recombination rates array (2)
+//        int index(dis(gen)); // cout << "The starting index is " << index << endl;
+//        
+//        /* From the surviving population we need to 'refill' a new one with 'numInd'
+//         * individuals. These new individuals have half of their genomes derived
+//         * from each of their parents' gametes */
+//     
+//        for (int i=0; i<numInd; i++)
+//        {
+//            random_device rd2;
+//            mt19937 gen(rd2());
+//            uniform_int_distribution<> pick_pairs(0, static_cast<int>(numIndAS[p]-1));
+//            
+//            int parent1(pick_pairs(gen));
+//            int parent2(pick_pairs(gen));
+//            
+////            parent1 = pick_pairs(e2);
+////            const int parent1 = static_cast<int>(pick_pairs(e2));
+////            const int parent2 = pick_pairs(e2);
+////
+//            
+////            cout << "The picked allele is # " << recomb_array[index] << endl;
+//            
+//            cout << "The first parent is # " << parent1 << " and its picked allele at locus one is " << recomb_array[index] << endl;
+//            cout << "The first parent's index plus 1 is: " << parent1 << " + 1 = " << parent1+1 << endl;
+////            pop[p][i][0][0].regulatory =
+//            pop_after_selection[p][parent1][0][0].coding =1.0;// << endl;
+//            
+//            cout << "The first parent is # " << parent1 << " and its picked allele at locus two is " << recomb_array[index+1] << endl;
+//            
+//            index++; index++; // This moves the index over two spaces
+//            
+//            cout << "The second parent is # " << parent2 << " and its picked allele at locus one is " << recomb_array[index] << endl;
+//            cout << "The second parent is # " << parent2 << " and its picked allele at locus two is " << recomb_array[index+1] << endl;
+//            
+//            index++; index++; // This moves the index over two spaces
+//            
+//            
+//            
+//            
+////            cout << "Picked parent one = " << parent1 << ", parent two " << parent2 << endl;
+//            
+//            cout << pop[p][i][0][0].regulatory << endl;
+////            cout << pop_after_selection[p][1][0][0].regulatory << endl;
+//
+//            
+////            cout << pop_after_selection[p][parent1][0][recomb_array[index]].regulatory << endl;
+//            
+////            recomb_array[index]
+//            
+//            
+//        }
+////        delete[] surving_parents;
+//    }
+//    
+//    
+//    
+//    
+    // This section below needs work.
+    
+//    for(int p=0; p<numPops; p++){
+//        // Where along the recombination array (2) should we start the indexing?
+//        int index(dis(gen));
+////        cout << "this is the starting index " << index << endl;
+//        cout << " Population " << p << " has " << numIndAS[p] << " inds." << endl;
+//        for(int ii=index; ii<(index+numInd); ii++){
+//            cout << recomb_array[ii] << endl;
+//            ii++; // This is on purpose
+//        }
+//        
+//        for(int i=0; i<numInd; i++){
+//            // Replace the value of pop[p][i] with a (mutated) recombinant from the after selection survivers
+//            
+//            
+//            
+//            for(int c=0;c<numLoci;c++){
+//                for(int l=0; l<numAlleles;l++){
+//                    pop[p][i][c][l].coding=pop[p][i][c][l].coding+0.00001;//a1/numAlleles+make_genos(a1/numAlleles, allelic_Stdev)
+//                }
+//                //                cout<<endl;
+//            }
+////            cout<<endl;
+//        }
+//    }
+//}
 
 //General Functions
 void input(Populations *popPtr, int POPS, int INDS)
@@ -2006,8 +2209,6 @@ double make_genos(double geno_value, double allelic_stdev)
     //    cout << "Here's the result: " <<  dist(e2) << endl;
     return dist(e2);
 }
-
-
 
 
 

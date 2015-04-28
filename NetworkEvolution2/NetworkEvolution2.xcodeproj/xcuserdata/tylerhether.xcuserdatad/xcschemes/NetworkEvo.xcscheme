@@ -64,11 +64,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-p 2"
+            argument = "-p 1"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 5"
+            argument = "-i 10"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -96,7 +96,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-G 2000"
+            argument = "-G 200"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -116,7 +116,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-S 5000"
+            argument = "-S -100"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r 50"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
@@ -134,22 +138,27 @@
          <EnvironmentVariable
             key = "I"
             value = "./"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "framework"
             value = "Accelerate"
-            isEnabled = "YES">
+            isEnabled = "NO">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "NSZombieEnabled"
+            value = "YES"
+            isEnabled = "NO">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "DARMA_DONT_USE_WRAPPER"
             value = ""
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "O2"
             value = ""
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
       <AdditionalOptions>
