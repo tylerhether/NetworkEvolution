@@ -211,8 +211,10 @@ int main(int argc, char *argv[])
     
     cout << "Building recombination sequences";
     
-    int nrolls=numPops*numInds*num_generations < 50000 ? numPops*numInds*num_generations : 50000; // Is this enough?
-    cout << " with " << nrolls << " elements." << endl;
+//    int nrolls=10*numPops*numInds*num_generations < 100000 ? numPops*numInds*num_generations*10 : 100000; // Is this enough?
+    int nrolls=2*4*numPops*numInds;
+//    int nrolls=21;
+    cout << " with " << nrolls << " elements..." << endl;
     int *mRecombinationArray = new int[nrolls];
     int *mRecombinationArray2 = new int[nrolls];
 //    int mRecombinationArray2[nrolls] = { 0 };
@@ -241,9 +243,10 @@ int main(int argc, char *argv[])
         mRecombinationArray2[i] = sum % 2;
     }
     
-    for(int i=0; i<nrolls; i++){
-        cout << mRecombinationArray[i] << "\t" << mRecombinationArray2[i] << endl;
-    }
+    // Debugging:
+//    for(int i=0; i<nrolls; i++){
+//        cout << mRecombinationArray[i] << "\t" << mRecombinationArray2[i] << endl;
+//    }
     
 
     
@@ -282,39 +285,37 @@ int main(int argc, char *argv[])
     //
     
     Pop.getFitness();
-    Pop.printPop();
+//    Pop.printPop();
     // Recursion:
     for(int g=0; g<num_generations; g++){
         
-        if(g % 100 == 0){
-            cout << "Generation " << g << endl;
-        }
-        // Get new phenotypes
+        // Print Progress
+        if(g % 100 == 0) cout << "Generation " << g << endl;
+        
+        
+        // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod);
-        // Fitness:
+        
+        // Calculate Fitness:
         Pop.getFitness();
-        //            num_generations = num_generations + 1 -1;
-                             // Troubleshooting: print populations
-        // Need selection
-       
-        // Need mutation
+
+        // Viability Selection:
+        Pop.selection();
+        
+        // Recombine, mutate, and mate the survivers
         Pop.recombine_mutate_matePop(mRecombinationArray2, nrolls);
-//        Pop.getPheno(theta, gamma, *mod);
-//        Pop.getFitness();
-        // Need mating
 
         // Need migration
         
         // Need to estimate hybrid fitness
         
         // Need output summary stats to file
-        Pop.selection();
         
     }
     
 
     
-//     Pop.printPop();
+     Pop.printPop();
     // Cleaning up:
 //    Pop.deletePops_XYs();
    
@@ -1331,8 +1332,9 @@ void Populations::selection(){
     for(int p=0; p<numPops; p++){
         numIndAS[p]=0;
         for(int i=0; i<numInd; i++){
-            
-            if(rand()/static_cast<double>(RAND_MAX)<xys[p][i].ww){ // Individual lives
+            double TEST = rand()/static_cast<double>(RAND_MAX);
+
+            if(TEST<xys[p][i].ww){ // Individual lives
          
                 for(int c=0; c<numLoci; c++){
                     for(int a=0; a<numAlleles; a++){
@@ -1342,12 +1344,16 @@ void Populations::selection(){
                     }
                 }
                 numIndAS[p]++; // Keeps track of the number of individuals that survived selection
-            }
-            if(numIndAS[p]==0){ // If one population went extinct then a hole is torn in the universe.
-                cout << "Wait, selection killed off all of population #"<< p << ". Aborting simulation now.\nConsider weaker selection or larger number of individuals." << endl;
-                exit(1);
-            }
+            } /* else
+               * {
+               * cout << "This individual didn't make it: " << TEST << " is less than " << xys[p][i].ww << endl;
+               * }
+               */
             // Enhancement: check to make sure that the average fitness of the non-surviving individuals < w of surving inds.
+        }
+        if(numIndAS[p]==0){ // If one population went extinct then a hole is torn in the universe.
+            cout << "Wait, selection killed off all of population #"<< p << ". Aborting simulation now.\nConsider weaker selection or larger number of individuals." << endl;
+            exit(1);
         }
         // Debugging:
 //        cout << "The number of individuals retained in population " << p << " = " << numIndAS[p] << endl;
@@ -1382,107 +1388,75 @@ void Populations::printPop()
 
 
 
+
+
+
+
 void Populations::recombine_mutate_matePop(int recomb_array[], int rolls)
 {
+    
 
-}
+    /* Here is the random number generator that samples the starting position
+     * of the recombination array (2) */
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
+    
+    // This generator is for picking the parents
+    random_device rd2;
+    mt19937 gen2(rd2());
 
+    /* So for each population we need to mate the surviving individuals at random.
+     * The number of surviving individuals for each p populations is in the integer
+     * array 'numIndAS' */
+    for(int p=0; p<numPops; p++)
+    {
+        // Tailor the unif dist based on # survivers in population p
+        uniform_int_distribution<> pick_pairs(0, (numIndAS[p]-1)); //cout << "The total number of individuals in pop " << p << " are " << numIndAS[p] << endl;
+        
+        
+        // Pick the starting index of the recombination rates array (2)
+        int index(dis(gen)); // cout << "The starting index is " << index << endl;
+        
+        /* From the surviving population we need to 'refill' a new one with 'numInd'
+         * individuals. These new individuals have half of their genomes derived
+         * from each of their parents' gametes */
+     
+        for (int i=0; i<numInd; i++)
+        {
 
+            uniform_int_distribution<> pick_pairs(0, static_cast<int>(numIndAS[p]-1));
+            
+            int parent1(pick_pairs(gen2));
+            int parent2(pick_pairs(gen2));
+            
 
+            //cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << endl;
+            pop[p][i][0][0].coding =     pop_after_selection[p][parent1][0][recomb_array[index]].coding;
+            pop[p][i][0][0].regulatory = pop_after_selection[p][parent1][0][recomb_array[index]].regulatory;
+            
+            //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << endl;
+            pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding;
+            pop[p][i][1][0].regulatory = pop_after_selection[p][parent1][1][recomb_array[index+1]].regulatory;
+            
+            //cout << "The second parent is # " << parent2 << " and its picked allele at the first locus is " << recomb_array[index+2] << endl;
+            pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding;
+            pop[p][i][0][1].regulatory = pop_after_selection[p][parent2][0][recomb_array[index+2]].regulatory;
+            
+            //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << endl;
+            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+2]].coding;
+            pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+2]].regulatory;
+            
+            
+            index+=4;
+        }
 
-
-
-//
-//
-//void Populations::recombine_mutate_matePop(int recomb_array[], int rolls)
-//{
-//    
-//
-//    /* Here is the random number generator that samples the starting position
-//     * of the recombination array (2) */
-//    random_device rd;
-//    mt19937 gen(rd());
-//    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
-////    for (int n=0; n<1000; ++n)            // For troubleshooting:
-////        std::cout << dis(gen) << ' ';     // This block prints out the random integers
-////    std::cout << '\n';
-////    
-//    
-////    uniform_int_distribution<> pick_pairs(0, 20);
-////    for (int n=0; n<1000; ++n)            // For troubleshooting:
-////        std::cout << pick_pairs(gen) << ' ';     // This block prints out the random integers
-////    std::cout << '\n';
-////    
-//
-//
-//    /* So for each population we need to mate the surviving individuals at random.
-//     * The number of surviving individuals for each p populations is in the integer
-//     * array 'numIndAS' */
-//    for(int p=0; p<numPops; p++)
-//    {
-//        // Tailor the unif dist based on # survivers in population p
-//        uniform_int_distribution<> pick_pairs(0, (numIndAS[p]-1)); cout << "The total number of individuals in pop " << p << " are " << numIndAS[p] << endl;
-//        
-//        
-//        // Pick the starting index of the recombination rates array (2)
-//        int index(dis(gen)); // cout << "The starting index is " << index << endl;
-//        
-//        /* From the surviving population we need to 'refill' a new one with 'numInd'
-//         * individuals. These new individuals have half of their genomes derived
-//         * from each of their parents' gametes */
-//     
-//        for (int i=0; i<numInd; i++)
-//        {
-//            random_device rd2;
-//            mt19937 gen(rd2());
-//            uniform_int_distribution<> pick_pairs(0, static_cast<int>(numIndAS[p]-1));
-//            
-//            int parent1(pick_pairs(gen));
-//            int parent2(pick_pairs(gen));
-//            
-////            parent1 = pick_pairs(e2);
-////            const int parent1 = static_cast<int>(pick_pairs(e2));
-////            const int parent2 = pick_pairs(e2);
-////
-//            
-////            cout << "The picked allele is # " << recomb_array[index] << endl;
-//            
-//            cout << "The first parent is # " << parent1 << " and its picked allele at locus one is " << recomb_array[index] << endl;
-//            cout << "The first parent's index plus 1 is: " << parent1 << " + 1 = " << parent1+1 << endl;
-////            pop[p][i][0][0].regulatory =
-//            pop_after_selection[p][parent1][0][0].coding =1.0;// << endl;
-//            
-//            cout << "The first parent is # " << parent1 << " and its picked allele at locus two is " << recomb_array[index+1] << endl;
-//            
-//            index++; index++; // This moves the index over two spaces
-//            
-//            cout << "The second parent is # " << parent2 << " and its picked allele at locus one is " << recomb_array[index] << endl;
-//            cout << "The second parent is # " << parent2 << " and its picked allele at locus two is " << recomb_array[index+1] << endl;
-//            
-//            index++; index++; // This moves the index over two spaces
-//            
-//            
-//            
-//            
-////            cout << "Picked parent one = " << parent1 << ", parent two " << parent2 << endl;
-//            
-//            cout << pop[p][i][0][0].regulatory << endl;
-////            cout << pop_after_selection[p][1][0][0].regulatory << endl;
-//
-//            
-////            cout << pop_after_selection[p][parent1][0][recomb_array[index]].regulatory << endl;
-//            
-////            recomb_array[index]
-//            
-//            
-//        }
-////        delete[] surving_parents;
-//    }
-//    
-//    
-//    
-//    
-    // This section below needs work.
+    }
+    
+    
+    
+    
+    // This section below needs work. 
     
 //    for(int p=0; p<numPops; p++){
 //        // Where along the recombination array (2) should we start the indexing?
@@ -1508,7 +1482,7 @@ void Populations::recombine_mutate_matePop(int recomb_array[], int rolls)
 ////            cout<<endl;
 //        }
 //    }
-//}
+}
 
 //General Functions
 void input(Populations *popPtr, int POPS, int INDS)
