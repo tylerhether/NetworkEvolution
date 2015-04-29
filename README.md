@@ -2,6 +2,14 @@
 Network Evolution and DMIs. 
 
 
+I still need to add the following things:
+* 1) migration
+* 2) regulatory mutations
+* 3) test for hybrid incompatibility 
+* 4) Calculate other summary statistics and output them to file
+
+
+
 To build: 
 g++ -std=c++11 main.cp -o simulation
 
