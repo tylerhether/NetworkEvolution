@@ -92,7 +92,7 @@ public:
     
     
     // For Recobmining, mutating, and mating:
-    void recombine_mutate_matePop(int recomb_array[], double mutate_code_array[], int rolls);
+    void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int rolls);
     
     // For cleaning up.
     void deletePops_XYs();
@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
     
     cout << "Finished reading in agruments." << endl << endl << "Building recombination and mutation arrays";
     
-    int nrolls=2*4*numPops*numInds;
+    int nrolls=2000+(4*numInds);                        // There are 2000 possible starting points
     cout << " with " << nrolls << " elements..." << endl;
     int *mRecombinationArray = new int[nrolls];                 // This will store binary array (1=recombination, 0=no recomb.)
     int *mRecombinationArray2 = new int[nrolls];                // This will store the modulus 2 output
@@ -1430,17 +1430,7 @@ void Populations::printPop()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-void Populations::recombine_mutate_matePop(int recomb_array[], double mutate_code_array[], int rolls)
+void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int rolls)
 {
     
 
@@ -2203,8 +2193,8 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
     }
     
     
-    cout << "reg = " << reg_pattern << " x = " << x << " y = " << y << " theta = " << theta << " gamma= " << gamma << " model= " << mod << " a1= " << a1 << " a2= " << a2 << endl;
-    x = 20.3;
+//    cout << "reg = " << reg_pattern << " x = " << x << " y = " << y << " theta = " << theta << " gamma= " << gamma << " model= " << mod << " a1= " << a1 << " a2= " << a2 << endl;
+//    x = 20.3;
 }
 
 double make_genos(double geno_value, double allelic_stdev)
