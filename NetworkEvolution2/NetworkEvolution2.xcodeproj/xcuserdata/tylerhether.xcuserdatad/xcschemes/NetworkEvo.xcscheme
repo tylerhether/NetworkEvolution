@@ -64,63 +64,75 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-p 2"
+            argument = "-npops 2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 1000"
+            argument = "-i 2000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x 300"
+            argument = "-gen 2000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y 300"
+            argument = "-mu 0.01"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-n 1122"
+            argument = "-mu_var 0.02"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-t 300"
+            argument = "-reg_mu 0.003"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-g 1"
+            argument = "-x_start 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-m &apos;B&apos;"
+            argument = "-y_start 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-G 2000"
+            argument = "-x_opt 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-d 1"
+            argument = "-y_opt 400"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-X 100"
+            argument = "-start_network 1111"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-Y 400"
+            argument = "-sel_var 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-s 10000"
+            argument = "-sel_covar -100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-S -100"
+            argument = "-rec 0.5"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-r 50"
+            argument = "-theta 300"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-gamma 1"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-model &apos;B&apos;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-start_deviation 0"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
