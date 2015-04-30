@@ -68,11 +68,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 1000"
+            argument = "-i 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 2000"
+            argument = "-gen 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -84,23 +84,27 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-reg_mu 0.003"
+            argument = "-reg_mu 0.002"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_start 300"
+            argument = "-m_rate 0.2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_start 300"
+            argument = "-x_start 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_opt 100"
+            argument = "-y_start 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_opt 400"
+            argument = "-x_opt 500"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-y_opt 500"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -108,11 +112,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-sel_var 10000"
+            argument = "-sel_var 100000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-sel_covar -100"
+            argument = "-sel_covar 0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

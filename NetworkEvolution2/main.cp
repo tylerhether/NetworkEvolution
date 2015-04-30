@@ -90,9 +90,14 @@ public:
 //    int nIndAS[];
     void selection();
     
+    // For mutating the regulatory alleles
+//    void reg_mu(int indicator_int, char &network_char);
     
     // For Recobmining, mutating, and mating:
-    void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int rolls);
+    void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls);
+    
+    // For migrating:
+    void migratePop(double migration_rate);
     
     // For cleaning up.
     void deletePops_XYs();
@@ -118,7 +123,20 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
 double make_genos(double geno_value, double allelic_stdev);
 double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=500);
 
-// Main Function to run:
+void reg_mu(int indicator_int, string &network_char);
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * *
+ *                                              *
+ *                                              *
+ *                                              *
+ *                                              *
+ *                 MAIN  FUNCTION               *
+ *                                              *
+ *                                              *
+ *                                              *
+ * * * * * * * * * * * * * * * * * * * * * * * */
 int main(int argc, char *argv[])
 {
     
@@ -143,7 +161,7 @@ int main(int argc, char *argv[])
     double OM11(10000);                // Variance in stabilizing selection (for all pops)
     double OM12(0);
     double rec(0.5);                  // This is the recombination rate between coding loci
-    
+    double m_rate(0.0);
 //
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
     for(int i=1; i<argc; i++){
@@ -170,6 +188,10 @@ int main(int argc, char *argv[])
         if(string(argv[i]) == "-reg_mu"){
             reg_mu = atof(argv[i+1]);
             cout << "\tMutation rate of regulatory loci = " << reg_mu << endl;
+        }
+        if(string(argv[i]) == "-m_rate"){
+            m_rate = atof(argv[i+1]);
+            cout << "\tMigration rate = " << m_rate << endl;
         }
         if(string(argv[i]) == "-x_start"){
             x1 = atoi(argv[i+1]);
@@ -223,16 +245,15 @@ int main(int argc, char *argv[])
     }
     
     // Generate a random sequence of 1s and 0s for recombination:
+    cout << "Finished reading in arguments." << endl << endl << "Building recombination and mutation arrays";
     
-    cout << "Finished reading in agruments." << endl << endl << "Building recombination and mutation arrays";
-    
-    int nrolls=2000+(4*numInds);                        // There are 2000 possible starting points
+    int nrolls=50000+(4*numInds);                        // There are 50000 possible starting points
     cout << " with " << nrolls << " elements..." << endl;
     int *mRecombinationArray = new int[nrolls];                 // This will store binary array (1=recombination, 0=no recomb.)
     int *mRecombinationArray2 = new int[nrolls];                // This will store the modulus 2 output
 
     double *mMutateCodingArray = new double[nrolls];                  // This array will store double of mutational effects
-    double *mMutateRegulatoryArray = new double[nrolls];                 // For all 1s above, this will store the change in allelic value
+    int *mMutateRegulatoryArray = new int[nrolls];                 // For all 1s above, this will store the change in allelic value
     
     random_device generator;
     mt19937 e2(generator());
@@ -297,19 +318,42 @@ int main(int argc, char *argv[])
         }
     }
     
+    // For regulatory mutations we also do a similar thing.
+     
+    random_device generator3;                       // This block is for whether a mutation happens at all
+    mt19937 e2222(generator3());
+    bernoulli_distribution m_rateDist(reg_mu);
+    
+    random_device zero_one_two;                     // This block is for the actual new value
+    mt19937 e3(zero_one_two());
+    uniform_int_distribution<> Dist0_2(0,2);
+    
+    
+    //int tmpcounter(0);
+    for (int i=0; i<nrolls; i++){
+        if(m_rateDist(generator3)){
+            mMutateRegulatoryArray[i] = Dist0_2(zero_one_two);
+            //cout << mMutateRegulatoryArray[i] << endl;
+            //tmpcounter++;
+        } else {
+            mMutateRegulatoryArray[i] = 4;
+            //cout << mMutateRegulatoryArray[i] << endl;
+        }
 
+    }
+    //cout << "here's the freq estimate of reg_mu " << static_cast<double>(tmpcounter)/static_cast<double>(nrolls) << endl;
     
     
     
+
+    /* Running the simulations: **********************************************************
+     * This initializes the populations with their starting genotypes and phenotypes and *
+     * calculates their initial fitness values. It then runs through each generation and *
+     * caluclates phenotypes from genotypes; calculates fitness from phenotypes; selects *
+     * based on fitness; mates, recombines, and mutates; migrates; and outputs summary   *
+     * statistics. Between the calls to fitness and selection hybrid incompatibility is  *
+     * estimated as well.*****************************************************************/
     
-    
-    
-    
-    
-    
-    
-    //
-    // Running:
     Populations Pop;
     input(&Pop, numPops, numInds);
     
@@ -331,7 +375,7 @@ int main(int argc, char *argv[])
     //
     
     Pop.getFitness();
-//    Pop.printPop();
+    Pop.printPop();
     // Recursion:
     for(int g=0; g<num_generations; g++){
         
@@ -349,15 +393,20 @@ int main(int argc, char *argv[])
         Pop.selection();
         
         // Recombine, mutate, and mate the survivers
-        Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, nrolls);
+        Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
 
         // Need migration
-        
+        Pop.migratePop(m_rate);
         // Need to estimate hybrid fitness
         
         // Need output summary stats to file
         
     }
+//    char test = '2';
+//    cout << "test is  " << test << endl;
+//    Pop.reg_mu(1, test);
+//    cout << "test is now " << test << endl;
+    
     
     Pop.getPheno(theta, gamma, *mod);
     Pop.getFitness();
@@ -378,8 +427,16 @@ int main(int argc, char *argv[])
 
 
 
-
-//Class Functions
+/* * * * * * * * * * * * * * * * * * * * * * * *
+ *                                              *
+ *                                              *
+ *                                              *
+ *                                              *
+ *                 CLASS FUNCTIONS              *
+ *                                              *
+ *                                              *
+ *                                              *
+ * * * * * * * * * * * * * * * * * * * * * * * */
 Populations::Populations()
 {
     pop=NULL;
@@ -465,7 +522,6 @@ void Populations::deletePops_XYs()
     delete opts;
     delete[] numIndAS;
 }
-
 
 void Populations::initializeOPTIMA(double xxx, double yyy, double omm11, double omm12)
 {
@@ -1406,13 +1462,16 @@ void Populations::selection(){
         // Debugging:
 //        cout << "The number of individuals retained in population " << p << " = " << numIndAS[p] << endl;
     }
-
-    
-    
-    
 }
 
+void Populations::migratePop(double migration_rate)
+{
+    
+    //cout << " before swap one is " << pop[0][0][0][0].regulatory << " and two is " << pop[0][0][1][0].regulatory << endl;
+    //swap(pop[0][0][0][0].regulatory,pop[0][0][1][0].regulatory);
+    //cout << " after swap one is " << pop[0][0][0][0].regulatory << " and two is " << pop[0][0][1][0].regulatory << endl;
 
+}
 
 void Populations::printPop()
 {
@@ -1430,10 +1489,8 @@ void Populations::printPop()
 }
 
 
-void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int rolls)
+void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls)
 {
-    
-
     /* Here is the random number generator that samples the starting position
      * of the recombination array (2) */
     random_device rd;
@@ -1452,14 +1509,12 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
         // Tailor the unif dist based on # survivers in population p
         uniform_int_distribution<> pick_pairs(0, (numIndAS[p]-1)); //cout << "The total number of individuals in pop " << p << " are " << numIndAS[p] << endl;
         
-        
         // Pick the starting index of the recombination rates array (2)
         int index(dis(gen)); // cout << "The starting index is " << index << endl;
         
         /* From the surviving population we need to 'refill' a new one with 'numInd'
          * individuals. These new individuals have half of their genomes derived
          * from each of their parents' gametes */
-     
         for (int i=0; i<numInd; i++)
         {
 
@@ -1468,47 +1523,42 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
             int parent1(pick_pairs(gen2));
             int parent2(pick_pairs(gen2));
             
-            /* for(int c=0; c<2; c++){ // This blocks is for error checking.
-             *   for(int l=0;l<2;l++){
-             * cout<< "Before overwrite: Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << "\tw=" << xys[p][i].ww << endl;
-             *   }
-             *
-             * }
-             * cout << endl;
-             */
-            
             //cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
             pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)*(mutate_code_array[index]);
             pop[p][i][0][0].regulatory = pop_after_selection[p][parent1][0][recomb_array[index]].regulatory;
+            reg_mu(mutate_reg_array[index], pop[p][i][0][0].regulatory); // This function mutates the regulatory region
+
             
             //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop_after_selection[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
             pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding*(mutate_code_array[index+1]);
             pop[p][i][1][0].regulatory = pop_after_selection[p][parent1][1][recomb_array[index+1]].regulatory;
+            reg_mu(mutate_reg_array[index+1],pop[p][i][1][0].regulatory); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop_after_selection[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
             pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding*(mutate_code_array[index+2]);
             pop[p][i][0][1].regulatory = pop_after_selection[p][parent2][0][recomb_array[index+2]].regulatory;
+            reg_mu(mutate_reg_array[index+2],pop[p][i][0][1].regulatory); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop_after_selection[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
             pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+2]].coding*(mutate_code_array[index+3]);
             pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+2]].regulatory;
-            
+            reg_mu(mutate_reg_array[index+3],pop[p][i][1][1].regulatory); // This function mutates the regulatory region
             
             index+=4;
-            
-           /* for(int c=0; c<2; c++){ // This blocks is for error checking.
-            *    for(int l=0;l<2;l++){
-            *        cout<< "After overwrite: Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << "\tw=" << xys[p][i].ww << endl;
-            *    }
-            *
-            * }
-            * cout << endl;
-            */
         }
     }
 }
 
-//General Functions
+/* * * * * * * * * * * * * * * * * * * * * * * *
+ *                                              *
+ *                                              *
+ *                                              *
+ *                                              *
+ *               GENERAL FUNCTIONS              *
+ *                                              *
+ *                                              *
+ *                                              *
+ * * * * * * * * * * * * * * * * * * * * * * * */
 void input(Populations *popPtr, int POPS, int INDS)
 {
     
@@ -2208,11 +2258,22 @@ double make_genos(double geno_value, double allelic_stdev)
     return dist(e2);
 }
 
-
-
-
-
-
+// This function actually does the mutating of the regulatory networks
+void reg_mu(int indicator_int, string &network_char)
+{
+    if(indicator_int==0)
+    {
+        network_char = "0";
+    } else if(indicator_int==1)
+    {
+        network_char = "1";
+    } else if(indicator_int==2)
+    {
+        network_char = "2";
+    } else {
+        network_char = network_char;
+    }
+}
 
 
 
