@@ -58,8 +58,10 @@ public:
     locus**** pop;
     
     // Initialize variables that will make numPops populations
-    int numPops,numInd,numLoci,numAlleles; // AS = after selection
-    int *numIndAS;//[10];
+    int numPops,numInd,numLoci,numAlleles;
+    int *numIndAS; // AS = after selection
+    double mig_rate;
+    int *numIndMigration;
 
     // Start with a NULL population
     Populations();
@@ -97,7 +99,8 @@ public:
     void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls);
     
     // For migrating:
-    void migratePop(double migration_rate);
+    locus**** migrant_pool;
+    void migratePop(int *mig_array, int rolls);
     
     // For cleaning up.
     void deletePops_XYs();
@@ -110,14 +113,14 @@ public:
     }
     
     // Print population to screen (for debugging)
-    void printPop();
+    void printPop(int flag); // flag==1 then print only the last flag individuals
     
     // Calculate the fitness given the trait values, selection, and triat optimum
     
 };
 
 // Forward Declarations of Functions:       // Can be moved to a header file if gets too long.
-void input(Populations *popPtr, int POPS, int INDS);             // These are function prototypes
+void input(Populations *popPtr, int POPS, int INDS, double MRATE);             // These are function prototypes
 void printLocus(locus Locus);               // These are function prototypes
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
 double make_genos(double geno_value, double allelic_stdev);
@@ -162,7 +165,7 @@ int main(int argc, char *argv[])
     double OM12(0);
     double rec(0.5);                  // This is the recombination rate between coding loci
     double m_rate(0.0);
-//
+
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
     for(int i=1; i<argc; i++){
         if(string(argv[i]) == "-npops"){
@@ -244,6 +247,10 @@ int main(int argc, char *argv[])
 
     }
     
+    /*
+    BEGIN GENERATING RANDOM ARRAYS
+    */
+    
     // Generate a random sequence of 1s and 0s for recombination:
     cout << "Finished reading in arguments." << endl << endl << "Building recombination and mutation arrays";
     
@@ -254,6 +261,10 @@ int main(int argc, char *argv[])
 
     double *mMutateCodingArray = new double[nrolls];                  // This array will store double of mutational effects
     int *mMutateRegulatoryArray = new int[nrolls];                 // For all 1s above, this will store the change in allelic value
+    
+    int *mMigrantArray = new int[nrolls];
+    
+    
     
     random_device generator;
     mt19937 e2(generator());
@@ -344,8 +355,36 @@ int main(int argc, char *argv[])
     //cout << "here's the freq estimate of reg_mu " << static_cast<double>(tmpcounter)/static_cast<double>(nrolls) << endl;
     
     
-    
+    // For migration we define an array of the same length as the others but
+    // each element is distributed as a Poisson(numInds*m_rate).
+    // The number of migrants can't be greater than the population size
+    random_device Nm;
+    mt19937 e4(Nm());
+    poisson_distribution<int> Poisson(static_cast<double>(numInds*m_rate));
+    for (int i=0; i<nrolls; i++)
+    {
+        int rand_variable(0);
+        int flag(0);
+        do
+        {
+            if(flag>0) cout << "Warning: sampled more migrants than individuals " << flag << " time(s) in a row. Consider a smaller Nm." << endl;
+            if(flag>=100){
+                cout << endl << endl << endl << "Simulator sampled Poisson(Nm) 100 times in a row where Nm>N.\nConsider a smaller Nm. Aborting simulation." << endl;
+                exit(3);
+            }
+            rand_variable = Poisson(Nm);
+            mMigrantArray[i] = rand_variable;
+            flag++;
+        } while (rand_variable>numInds);
 
+        
+        
+//        cout << mMigrantArray[i] << "\t";
+    }
+    
+    
+    
+    
     /* Running the simulations: **********************************************************
      * This initializes the populations with their starting genotypes and phenotypes and *
      * calculates their initial fitness values. It then runs through each generation and *
@@ -355,7 +394,7 @@ int main(int argc, char *argv[])
      * estimated as well.*****************************************************************/
     
     Populations Pop;
-    input(&Pop, numPops, numInds);
+    input(&Pop, numPops, numInds, m_rate);
     
     // Initialize genotypic values. These will be updated in the next function.
     double a1, a2;
@@ -370,18 +409,15 @@ int main(int argc, char *argv[])
     // ...Phenotypes:
     Pop.initilizeXYs();
     Pop.getPheno(theta, gamma, *mod);
-    
     Pop.initializeOPTIMA(XOPT, YOPT, OM11, OM12);
-    //
-    
     Pop.getFitness();
-    Pop.printPop();
+    Pop.printPop(5);
+    
     // Recursion:
-    for(int g=0; g<num_generations; g++){
+    for(int g=1; g<(1+num_generations); g++){
         
-        // Print Progress
-        if(g % 100 == 0) cout << "Generation " << g << endl;
-        
+        // Print Progress every 250 generations
+        if(g % 250 == 0) cout << "Generation " << g << endl;
         
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod);
@@ -396,36 +432,27 @@ int main(int argc, char *argv[])
         Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
 
         // Need migration
-        Pop.migratePop(m_rate);
+        Pop.migratePop(mMigrantArray, nrolls);
+        
         // Need to estimate hybrid fitness
         
         // Need output summary stats to file
         
     }
-//    char test = '2';
-//    cout << "test is  " << test << endl;
-//    Pop.reg_mu(1, test);
-//    cout << "test is now " << test << endl;
-    
     
     Pop.getPheno(theta, gamma, *mod);
     Pop.getFitness();
-    Pop.printPop();
-    // Cleaning up:
-//    Pop.deletePops_XYs();
-   
-    /* Troubleshooting: run this block of code to determine the version of C++ that is used:
-     * if( __cplusplus == 201103L ) std::cout << "C++11\n" ;
-     * else if( __cplusplus == 199711L ) std::cout << "C++98\n" ;
-     * else std::cout << "pre-standard C++\n" ;*/
+    Pop.printPop(10);
+    
+    // Cleaning dynamically allocated memory
     delete[] mRecombinationArray;
     delete[] mRecombinationArray2;
     delete[] mMutateCodingArray;
     delete[] mMutateRegulatoryArray;
+    delete[] mMigrantArray;
+    
     return 0;
 }
-
-
 
 /* * * * * * * * * * * * * * * * * * * * * * * *
  *                                              *
@@ -481,6 +508,33 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
             }
         }
     }
+    
+    /* This block holds an array 'numIndMigration' that keeps track of the number of migrants each generation
+     * and the migrant_pool data frame -- an intermediate data type that holds the migrant
+     * genotypes (i.e., the center island of the island model). Because migration here is modeled
+     * stocastically, the size of the migrant_pool will vary. Instead of dynamically allocating
+     * memory every generation we just keep account of the number of migrants in each population
+     * in each generation (using the numIndMigration array). */
+    
+    numIndMigration=new int[numPops];
+    
+    migrant_pool=new locus***[1]; // static_cast<int>(numPops*numInd*mig_rate)
+    migrant_pool[0]=new locus**[static_cast<int>(1.25*numPops*numInd)]; // A buffer of numInd times seems good enough. Reduce it if computation gets too slow.
+    for(int i=0; i<static_cast<int>(1.25*numPops*numInd); i++)
+    {
+        migrant_pool[0][i]=new locus*[numLoci];
+      
+        for(int c=0;c<numLoci;c++)
+        {
+            migrant_pool[0][i][c]=new locus[numAlleles];
+            for(int l=0; l<numAlleles; l++)
+            {
+                migrant_pool[0][i][c][l].coding = 0;
+                migrant_pool[0][i][c][l].regulatory = "3";
+            }
+        }
+    }
+    cout << "The mean number of migrants per generation is, Nm = " << static_cast<int>(numInd*mig_rate) << endl;
 }
 
 void Populations::initilizeXYs()
@@ -514,13 +568,59 @@ void Populations::deletePops_XYs()
         delete pop[p];
         delete xys[p];
         delete pop_after_selection[p];
+
 //        delete numIndAS;
     }
+    
+    // Delete the migrant pool
+    for(int i=0; i<static_cast<int>(1.25*numPops*numInd); i++)
+    {
+        for(int c=0; c<numLoci; c++)
+        {
+            delete[] migrant_pool[0][i][c];
+        }
+        delete migrant_pool[0][i];
+    }
+    delete migrant_pool[0];
+    
+    
     delete pop;
     delete pop_after_selection;
+    delete migrant_pool;
     delete xys;
     delete opts;
     delete[] numIndAS;
+    delete[] numIndMigration;
+}
+
+void Populations::printPop(int flag)
+{
+    for(int p=0; p<numPops; p++){
+        if(flag>0 && flag<=numInd)
+        {
+            for(int i=(numInd-flag); i<numInd; i++){
+                for(int c=0;c<numLoci;c++){
+                    for(int l=0; l<numAlleles;l++){
+                        cout<< "Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << "\tw=" << xys[p][i].ww << endl;
+                    }
+                    //                cout<<endl;
+                }
+                cout<<endl;
+            }
+        } else
+        {
+            for(int i=0; i<numInd; i++){
+                for(int c=0;c<numLoci;c++){
+                    for(int l=0; l<numAlleles;l++){
+                        cout<< "Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << "\tw=" << xys[p][i].ww << endl;
+                    }
+                    //                cout<<endl;
+                }
+                cout<<endl;
+            }
+        }
+        
+    }
 }
 
 void Populations::initializeOPTIMA(double xxx, double yyy, double omm11, double omm12)
@@ -1464,31 +1564,6 @@ void Populations::selection(){
     }
 }
 
-void Populations::migratePop(double migration_rate)
-{
-    
-    //cout << " before swap one is " << pop[0][0][0][0].regulatory << " and two is " << pop[0][0][1][0].regulatory << endl;
-    //swap(pop[0][0][0][0].regulatory,pop[0][0][1][0].regulatory);
-    //cout << " after swap one is " << pop[0][0][0][0].regulatory << " and two is " << pop[0][0][1][0].regulatory << endl;
-
-}
-
-void Populations::printPop()
-{
-    for(int p=0; p<numPops; p++){
-        for(int i=0; i<numInd; i++){
-            for(int c=0;c<numLoci;c++){
-                for(int l=0; l<numAlleles;l++){
-                    cout<< "Pop=" << p << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << pop[p][i][c][l].regulatory<<" , "<<pop[p][i][c][l].coding<<")\t x=" << xys[p][i].xx << "\ty=" << xys[p][i].yy << "\tw=" << xys[p][i].ww << endl;
-                }
-                //                cout<<endl;
-            }
-            cout<<endl;
-        }
-    }
-}
-
-
 void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls)
 {
     /* Here is the random number generator that samples the starting position
@@ -1548,6 +1623,109 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
         }
     }
 }
+void Populations::migratePop(int *mig_array, int rolls)
+{
+    // This random number generator is for sampling the index (i.e., starting) value of the mig_array
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numPops+1)));
+    
+    // Pick the starting index of the mig_array
+    int index(dis(gen)); // cout << "The starting index is " << index << endl;
+    
+    // Sample the Poisson(Nm) individuals for each population (sampling already done; this calls the from the index)
+    for(int p=0; p<numPops; p++)
+    {
+        mig_array[p]=mig_array[index]; // Reset the migrant count of population p to the current index's value
+        //        cout << mig_array[p] << "\t";
+        index++;
+        
+    }
+    
+    // At this point mig_array is an array of length numPops where each element gives the number of
+    // emmigrants of a given population to the migrant_pool data frame. These values will also be
+    // the number of immigants back into the population (after the order gets randomized).
+    
+    // This value keeps track of the total number of migrants (i.e., sum of all populaitons' migrants).
+    int CurrentMigrantCount(0);
+    
+    // Swap the genotypes of migrant CurrentMigrantCount with individual i at populaiton p
+    // Note, temporarily the genotype of p_i will be nonsense (but it will get switched back).
+    for(int p=0; p<numPops; p++)
+    {
+        for(int i=0; i<mig_array[p]; i++)
+        {
+            swap(pop[p][i], migrant_pool[0][CurrentMigrantCount]);
+            CurrentMigrantCount++;
+        }
+    }
+    
+    // Note, there is a small (tiny) chance that the number of migrants is above the allocated number of individuals in
+    // the migrant pool.  If this happens, terminate the simulator.
+    if(CurrentMigrantCount>=static_cast<int>(1.25*numPops*numInd)){ // If one population went extinct then a hole is torn in the universe.
+        cout << "Wait! The number of effective migrants went over the allocated buffer. Aborting simulation now.\nConsider a smaller Nm." << endl;
+        exit(2);
+    }
+    
+    //        cout << "| the total number of migrants = " << CurrentMigrantCount << endl;
+    
+    
+    // Shuffle the migrant_pool (up to the total number of migrants, CurrentMigrantCount)
+    
+    //    for(int i=0; i<CurrentMigrantCount; i++)                              // Lots of blocks for debugging here.
+    //    {
+    //        cout << "Before shuffling Ind = " << i << "\t";
+    //        for(int c=0; c<2; c++)
+    //        {
+    //
+    //            for(int l=0; l<2; l++)
+    //            {
+    //
+    //                cout<< "Locus=" << c << "\t"<< "allele=" << l << "\t(" << migrant_pool[0][i][c][l].regulatory<<" , "<<migrant_pool[0][i][c][l].coding<<")\t";
+    //            }
+    //
+    //        }
+    //        cout << endl;
+    //    }
+    //    cout << endl;
+    
+    random_shuffle(&migrant_pool[0][0], &migrant_pool[0][(CurrentMigrantCount)]);
+    
+    //    for(int i=0; i<CurrentMigrantCount; i++)
+    //    {
+    //        cout << "After shuffling Ind = " << i << "\t";
+    //        for(int c=0; c<2; c++)
+    //        {
+    //
+    //            for(int l=0; l<2; l++)
+    //            {
+    //
+    //                cout<< "Locus=" << c << "\t"<< "allele=" << l << "\t(" << migrant_pool[0][i][c][l].regulatory<<" , "<<migrant_pool[0][i][c][l].coding<<")\t";
+    //            }
+    //
+    //        }
+    //        cout << endl;
+    //    }
+    //    cout << endl;
+    //
+    //
+    //    cout << endl << endl;
+    
+    // Now that the migrant pool's genotypes have been shuffled we need to systematically put them back
+    // in the populations. Here we used the swap function again and return the same number of
+    // immigrants as we took out before the shuffling. This is literally done the same way
+    // we swapped them earlier in the function.
+    CurrentMigrantCount=0;
+    for(int p=0; p<numPops; p++)
+    {
+        for(int i=0; i<mig_array[p]; i++)
+        {
+            swap(pop[p][i], migrant_pool[0][CurrentMigrantCount]);
+            CurrentMigrantCount++;
+        }
+    }
+    
+}
 
 /* * * * * * * * * * * * * * * * * * * * * * * *
  *                                              *
@@ -1559,7 +1737,7 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
  *                                              *
  *                                              *
  * * * * * * * * * * * * * * * * * * * * * * * */
-void input(Populations *popPtr, int POPS, int INDS)
+void input(Populations *popPtr, int POPS, int INDS, double MRATE)
 {
     
     (*popPtr).numPops = POPS;
@@ -1571,7 +1749,7 @@ void input(Populations *popPtr, int POPS, int INDS)
     //cout<<"# of loci are "<<(*popPtr).numLoci<<endl;
     (*popPtr).numAlleles =2;
     //cout<<"# of alleles are "<<(*popPtr).numAlleles<<endl;
-    
+    (*popPtr).mig_rate = MRATE;
 }
 
 void printLocus(locus Locus)

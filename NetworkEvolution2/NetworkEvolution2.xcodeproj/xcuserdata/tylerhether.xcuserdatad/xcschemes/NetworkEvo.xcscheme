@@ -64,11 +64,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-npops 2"
+            argument = "-npops 20"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 10000"
+            argument = "-i 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -88,15 +88,15 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-m_rate 0.2"
+            argument = "-m_rate 0.01"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_start 100"
+            argument = "-x_start 200"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_start 100"
+            argument = "-y_start 200"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -136,7 +136,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_deviation 0"
+            argument = "-start_deviation 5"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
