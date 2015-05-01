@@ -62,6 +62,7 @@ public:
     int *numIndAS; // AS = after selection
     double mig_rate;
     int *numIndMigration;
+    
 
     // Start with a NULL population
     Populations();
@@ -70,17 +71,18 @@ public:
     void initilizePop(string reg_pattern, double theta, double gamma, char mod, double a1, double a2, double allelic_Stdev);
     
     // Define the structure of the Phenotypes
-    phenotypes** xys;
+    phenotypes** xys; // For regular (parental) populations
+    phenotypes** xyw_hybrids; // For hybrid populations
     
     // Initialize Phenotypes
     void initilizeXYs();
     
     // Get Phenotypes
-    void getPheno(double theta, double gamma, char mod);
+    void getPheno(double theta, double gamma, char mod, int flag);
     void geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY);
     
     // Get Fitness
-    void getFitness();
+    void getFitness(int flag);
     void pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W);
     
     // Intialize Optima
@@ -90,6 +92,7 @@ public:
     // For selection:
     locus**** pop_after_selection;
 //    int nIndAS[];
+    void getRelativeFitness(); // For getting relative fitness
     void selection();
     
     // For mutating the regulatory alleles
@@ -101,6 +104,11 @@ public:
     // For migrating:
     locus**** migrant_pool;
     void migratePop(int *mig_array, int rolls);
+    
+    // For assessing hybrid fitness:
+    locus**** hybrid_pool;
+    void make_hybrids(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls);
+    void printHybrids(int flag); // for printing hybrids to screen
     
     // For cleaning up.
     void deletePops_XYs();
@@ -127,7 +135,7 @@ double make_genos(double geno_value, double allelic_stdev);
 double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=500);
 
 void reg_mu(int indicator_int, string &network_char);
-
+double mean(double some_array[], int size);
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * *
@@ -166,6 +174,9 @@ int main(int argc, char *argv[])
     double rec(0.5);                  // This is the recombination rate between coding loci
     double m_rate(0.0);
 
+    int selection_mode(2);       // Advanced: 1 = "soft selection", any other integer = hard
+    
+    
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
     for(int i=1; i<argc; i++){
         if(string(argv[i]) == "-npops"){
@@ -408,11 +419,17 @@ int main(int argc, char *argv[])
     
     // ...Phenotypes:
     Pop.initilizeXYs();
-    Pop.getPheno(theta, gamma, *mod);
+    Pop.getPheno(theta, gamma, *mod, 0);
     Pop.initializeOPTIMA(XOPT, YOPT, OM11, OM12);
-    Pop.getFitness();
-    Pop.printPop(5);
+    Pop.getFitness(0); // 0 = parental population, 1 = hybrid population
+    if(selection_mode==1)
+    {
+        Pop.getRelativeFitness();
+    }
+
     
+    Pop.printPop(5);
+
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
         
@@ -420,11 +437,15 @@ int main(int argc, char *argv[])
         if(g % 250 == 0) cout << "Generation " << g << endl;
         
         // Get New Phenotypes
-        Pop.getPheno(theta, gamma, *mod);
+        Pop.getPheno(theta, gamma, *mod, 0);
         
         // Calculate Fitness:
-        Pop.getFitness();
-
+        Pop.getFitness(0);
+        if(selection_mode==1)
+        {
+            Pop.getRelativeFitness();
+        }
+        
         // Viability Selection:
         Pop.selection();
         
@@ -434,15 +455,27 @@ int main(int argc, char *argv[])
         // Need migration
         Pop.migratePop(mMigrantArray, nrolls);
         
-        // Need to estimate hybrid fitness
+        // ESTIMATING HYBRID FITNESS
+        // 1 - Make hybrids
+        Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
+        
+        // 2 - calculate their phenotypes
+        Pop.getPheno(theta, gamma, *mod, 1);            // 1 is a flag for hybrids
+        
+        // 3 - calculate their absolute fitness
+        Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
         
         // Need output summary stats to file
         
     }
     
-    Pop.getPheno(theta, gamma, *mod);
-    Pop.getFitness();
+    Pop.getPheno(theta, gamma, *mod, 0);
+    Pop.getFitness(0);
     Pop.printPop(10);
+    
+    // Estimate the fitness of the hybrids:
+//    Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
+    Pop.printHybrids(10);
     
     // Cleaning dynamically allocated memory
     delete[] mRecombinationArray;
@@ -509,7 +542,7 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
         }
     }
     
-    /* This block holds an array 'numIndMigration' that keeps track of the number of migrants each generation
+    /* This block initializes an array 'numIndMigration' that keeps track of the number of migrants each generation
      * and the migrant_pool data frame -- an intermediate data type that holds the migrant
      * genotypes (i.e., the center island of the island model). Because migration here is modeled
      * stocastically, the size of the migrant_pool will vary. Instead of dynamically allocating
@@ -534,7 +567,41 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
             }
         }
     }
-    cout << "The mean number of migrants per generation is, Nm = " << static_cast<int>(numInd*mig_rate) << endl;
+    // cout << "The mean number of migrants per generation is, Nm = " << static_cast<int>(numInd*mig_rate) << endl;
+    
+    /* This block initializes an array that is used for assessing hybrid fitness. It
+     * is one (hybrid) population by numInd long by 2 loci by 2 alleles. Like pop and 
+     * pop_after_select, each element of the array holds the regulatory and coding genotypes.
+     * Unlike pop_after_select, however, fitness will be estimated from these genotypes so
+     * There needs to be a phenotypes structure initialized (and destroyed)                 */
+     
+    hybrid_pool=new locus***[1];
+    hybrid_pool[0]=new locus**[numInd];
+    for(int i=0; i<numInd; i++)
+    {
+        hybrid_pool[0][i]=new locus*[numLoci];
+        
+        for(int c=0;c<numLoci;c++)
+        {
+            hybrid_pool[0][i][c]=new locus[numAlleles];
+            for(int l=0; l<numAlleles; l++)
+            {
+                hybrid_pool[0][i][c][l].coding = 0;
+                hybrid_pool[0][i][c][l].regulatory = "4";
+            }
+        }
+    }
+    
+    // This is the phenotype and fitness phenotypes structure for the hybrid population
+    xyw_hybrids=new phenotypes*[1];
+    xyw_hybrids[0]=new phenotypes[numInd];
+    for(int i=0; i<numInd; i++)
+    {
+        xyw_hybrids[0][i].xx = 0.0;
+        xyw_hybrids[0][i].yy = 0.0;
+        xyw_hybrids[0][i].ww = 0.0;
+    }
+    
 }
 
 void Populations::initilizeXYs()
@@ -542,7 +609,7 @@ void Populations::initilizeXYs()
     xys=new phenotypes*[numPops];
     for(int p=0; p<numPops; p++){
         xys[p]=new phenotypes[numInd];
-        for(int i=0; i<numInd; i++){
+        for(int i=0; i<numInd; i++){ // Do these have to be initialized?
             xys[p][i].xx = 0.0;
             xys[p][i].yy = 0.0;
             //            cout << xys[p][i].xx << endl;
@@ -583,6 +650,21 @@ void Populations::deletePops_XYs()
     }
     delete migrant_pool[0];
     
+    // Delete the hybrid pool
+    for(int i=0; i<numInd; i++)
+    {
+        for(int c=0; c<numLoci; c++)
+        {
+            delete[] hybrid_pool[0][i][c];
+        }
+        delete hybrid_pool[0][i];
+    }
+    delete hybrid_pool[0];
+    
+    // Delete the hybrid phenotypes struct
+    delete xyw_hybrids[0];
+    delete xyw_hybrids;
+    
     
     delete pop;
     delete pop_after_selection;
@@ -591,6 +673,8 @@ void Populations::deletePops_XYs()
     delete opts;
     delete[] numIndAS;
     delete[] numIndMigration;
+    delete hybrid_pool;
+
 }
 
 void Populations::printPop(int flag)
@@ -622,6 +706,35 @@ void Populations::printPop(int flag)
         
     }
 }
+void Populations::printHybrids(int flag)
+{
+    for(int p=0; p<1; p++){
+        if(flag>0 && flag<=numInd)
+        {
+            for(int i=(numInd-flag); i<numInd; i++){
+                for(int c=0;c<numLoci;c++){
+                    for(int l=0; l<numAlleles;l++){
+                        cout<< "Pop= hybrid" << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << hybrid_pool[p][i][c][l].regulatory<<" , "<<hybrid_pool[p][i][c][l].coding<<")\t x=" << xyw_hybrids[p][i].xx << "\ty=" << xyw_hybrids[p][i].yy << "\tw=" << xyw_hybrids[p][i].ww << endl;
+                    }
+                    //                cout<<endl;
+                }
+                cout<<endl;
+            }
+        } else
+        {
+            for(int i=0; i<numInd; i++){
+                for(int c=0;c<numLoci;c++){
+                    for(int l=0; l<numAlleles;l++){
+                        cout<< "Pop= hybrid" << "\t" << "Ind=" << i << "\t" << "Locus=" << c << "\t"<< "allele=" << l << "\t(" << hybrid_pool[p][i][c][l].regulatory<<" , "<<hybrid_pool[p][i][c][l].coding<<")\t x=" << xyw_hybrids[p][i].xx << "\ty=" << xyw_hybrids[p][i].yy << "\tw=" << xyw_hybrids[p][i].ww << endl;
+                    }
+                    //                cout<<endl;
+                }
+                cout<<endl;
+            }
+        }
+        
+    }
+}
 
 void Populations::initializeOPTIMA(double xxx, double yyy, double omm11, double omm12)
 {
@@ -635,35 +748,62 @@ void Populations::initializeOPTIMA(double xxx, double yyy, double omm11, double 
     }
 }
 
-void Populations::getPheno(double theta, double gamma, char mod)
+void Populations::getPheno(double theta, double gamma, char mod, int flag)
 {
-    
-    for(int p=0; p<numPops; p++){
-        for(int i=0; i<numInd; i++){
+    // flag indiciates whether phenotypes are for parental data structures (0) or hybrids (1)
+    if(flag == 0)
+    {
+        for(int p=0; p<numPops; p++){
+            for(int i=0; i<numInd; i++){
+                
+                /* There are two structs with the Populations class: locus and phenotypes.
+                 locus holds the geneotypes and phenotypes hold the phenotypes.
+                 This function calls the geno_to_pheno function which actually retrieves the phenotypes.
+                 
+                 */
+                
+                geno_to_pheno(pop[p][i][0][0].coding,
+                              pop[p][i][0][1].coding,
+                              pop[p][i][1][0].coding,
+                              pop[p][i][1][1].coding,
+                              pop[p][i][0][0].regulatory,
+                              pop[p][i][0][1].regulatory,
+                              pop[p][i][1][0].regulatory,
+                              pop[p][i][1][1].regulatory,
+                              theta,
+                              gamma,
+                              mod,
+                              xys[p][i].xx,
+                              xys[p][i].yy);
+                
+            }
             
-            /* There are two structs with the Populations class: locus and phenotypes.
-             locus holds the geneotypes and phenotypes hold the phenotypes.
-             This function calls the geno_to_pheno function which actually retrieves the phenotypes.
-             
-             */
-            
-            geno_to_pheno(pop[p][i][0][0].coding,
-                          pop[p][i][0][1].coding,
-                          pop[p][i][1][0].coding,
-                          pop[p][i][1][1].coding,
-                          pop[p][i][0][0].regulatory,
-                          pop[p][i][0][1].regulatory,
-                          pop[p][i][1][0].regulatory,
-                          pop[p][i][1][1].regulatory,
+        }
+    } else if(flag == 1)
+    {
+        for(int i=0; i<numInd; i++)
+        {
+            int p(0);
+            geno_to_pheno(hybrid_pool[p][i][0][0].coding,
+                          hybrid_pool[p][i][0][1].coding,
+                          hybrid_pool[p][i][1][0].coding,
+                          hybrid_pool[p][i][1][1].coding,
+                          hybrid_pool[p][i][0][0].regulatory,
+                          hybrid_pool[p][i][0][1].regulatory,
+                          hybrid_pool[p][i][1][0].regulatory,
+                          hybrid_pool[p][i][1][1].regulatory,
                           theta,
                           gamma,
                           mod,
-                          xys[p][i].xx,
-                          xys[p][i].yy);
-            
+                          xyw_hybrids[p][i].xx,
+                          xyw_hybrids[p][i].yy);
         }
-        
+    } else
+    {
+        cout << "flag needs to be 1 for hybrids and 0 otherwise. Aborting simulation\n";
+        exit(4);
     }
+    
 }
 
 void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY)
@@ -1490,20 +1630,44 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
     
 }
 
-void Populations::getFitness()
+void Populations::getFitness(int flag) // hybrid optimum is assumed to be identical to population 0's optimum
 {
-    for(int p=0; p<numPops; p++){
-        for(int i=0; i<numInd; i++){
-            pheno_to_fitness(xys[p][i].xx,
-                             xys[p][i].yy,
+    // Flag is states whether or not hybrids are to be calculated (1 for hybrids, 0 otherwise)
+    if(flag==0)
+    {
+        for(int p=0; p<numPops; p++){
+            for(int i=0; i<numInd; i++){
+                pheno_to_fitness(xys[p][i].xx,
+                                 xys[p][i].yy,
+                                 opts[p].x_opt,
+                                 opts[p].y_opt,
+                                 opts[p].om11,
+                                 opts[p].om12,
+                                 xys[p][i].ww);
+                //            cout << opts[p].x_opt << endl;
+            }
+        }
+    } else if (flag == 1)
+    {
+        int p(0);
+        for(int i=0; i<numInd; i++)
+        {
+            pheno_to_fitness(xyw_hybrids[p][i].xx,
+                             xyw_hybrids[p][i].yy,
                              opts[p].x_opt,
                              opts[p].y_opt,
                              opts[p].om11,
                              opts[p].om12,
-                             xys[p][i].ww);
-            //            cout << opts[p].x_opt << endl;
+                             xyw_hybrids[p][i].ww);
         }
+    } else
+    {
+        cout << "flag needs to be 1 for hybrids and 0 otherwise. Aborting simulation\n";
+        exit(4);
     }
+
+    
+    
 }
 
 void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yopt, double om11, double om12, double &W)
@@ -1531,6 +1695,29 @@ void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yop
     
  
 }
+
+void Populations::getRelativeFitness()
+{
+    for(int p=0; p<numPops; p++)
+    {
+        double maxW(0);
+        // For through each individual and find the maximum fitness
+        for(int i=0; i<numInd; i++)
+        {
+            if(xys[p][i].ww > maxW)
+            {
+                maxW = xys[p][i].ww;
+            }
+        }
+        
+        // Now divide the absolute fitness by the max fitness
+        for(int i=0; i<numInd; i++)
+        {
+            xys[p][i].ww = (xys[p][i].ww / maxW);
+        }
+    }
+}
+
 
 void Populations::selection(){
     for(int p=0; p<numPops; p++){
@@ -1563,6 +1750,7 @@ void Populations::selection(){
 //        cout << "The number of individuals retained in population " << p << " = " << numIndAS[p] << endl;
     }
 }
+
 
 void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls)
 {
@@ -1615,14 +1803,76 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
             reg_mu(mutate_reg_array[index+2],pop[p][i][0][1].regulatory); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop_after_selection[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
-            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+2]].coding*(mutate_code_array[index+3]);
-            pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+2]].regulatory;
+            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+3]].coding*(mutate_code_array[index+3]);
+            pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+3]].regulatory;
             reg_mu(mutate_reg_array[index+3],pop[p][i][1][1].regulatory); // This function mutates the regulatory region
             
             index+=4;
         }
     }
 }
+
+void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls)
+{
+    // Need to define a random number generator that picks a uniform random
+    // integer between 0 and numPops to choose a population
+    random_device rd3;
+    mt19937 gen3(rd3());
+    uniform_int_distribution<> pick_pop(0, (numPops-1));
+    
+    // Need to define a random number generator that picks a parents via
+    // a uniform random integer between 0 and numInd
+    random_device rd2;
+    mt19937 gen2(rd2());
+    uniform_int_distribution<> pick_pairs(0, (numInd-1));
+    
+    // Need a generator for picking the starting point of the recomb_array
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
+    
+    // Fill in the hybrid_pool with F1 recombinants of parental populations
+    int index(dis(gen)); // This is the starting point in the recombination array (2)
+    for(int i=0; i<numInd; i++)
+    {
+        
+        int FirstParentsPop(pick_pop(gen3));
+        int SecondParentsPop;
+        do{
+           SecondParentsPop = pick_pop(gen3);
+        } while(SecondParentsPop==FirstParentsPop); // This do while loop ensures that mating don't occur from within a population
+        
+        
+        int parent1(pick_pairs(gen2));
+        int parent2(pick_pairs(gen2));
+        
+        //cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
+        hybrid_pool[0][i][0][0].coding =     pop[FirstParentsPop][parent1][0][recomb_array[index]].coding*(mutate_code_array[index]);
+        hybrid_pool[0][i][0][0].regulatory = pop[FirstParentsPop][parent1][0][recomb_array[index]].regulatory;
+        reg_mu(mutate_reg_array[index], hybrid_pool[0][i][0][0].regulatory); // This function mutates the regulatory region
+        
+        
+        //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop_after_selection[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
+        hybrid_pool[0][i][1][0].coding =     pop[FirstParentsPop][parent1][1][recomb_array[index+1]].coding*(mutate_code_array[index+1]);
+        hybrid_pool[0][i][1][0].regulatory = pop[FirstParentsPop][parent1][1][recomb_array[index+1]].regulatory;
+        reg_mu(mutate_reg_array[index+1],hybrid_pool[0][i][1][0].regulatory); // This function mutates the regulatory region
+        
+        //cout << "The second parent is # " << parent2 << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop_after_selection[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
+        hybrid_pool[0][i][0][1].coding =     pop[SecondParentsPop][parent2][0][recomb_array[index+2]].coding*(mutate_code_array[index+2]);
+        hybrid_pool[0][i][0][1].regulatory = pop[SecondParentsPop][parent2][0][recomb_array[index+2]].regulatory;
+        reg_mu(mutate_reg_array[index+2],hybrid_pool[0][i][0][1].regulatory); // This function mutates the regulatory region
+        
+        //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop_after_selection[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
+        hybrid_pool[0][i][1][1].coding =     pop[SecondParentsPop][parent2][1][recomb_array[index+3]].coding*(mutate_code_array[index+3]);
+        hybrid_pool[0][i][1][1].regulatory = pop[SecondParentsPop][parent2][1][recomb_array[index+3]].regulatory;
+        reg_mu(mutate_reg_array[index+3],hybrid_pool[0][i][1][1].regulatory); // This function mutates the regulatory region
+        
+        index+=4;
+//        cout << hybrid_pool[0][i][1][1].regulatory << "\t";
+    }
+    
+}
+
 void Populations::migratePop(int *mig_array, int rolls)
 {
     // This random number generator is for sampling the index (i.e., starting) value of the mig_array
@@ -2453,7 +2703,17 @@ void reg_mu(int indicator_int, string &network_char)
     }
 }
 
-
+double mean(double some_array[], int size)
+{
+    double avg(0.0);
+    double sum(0.0);
+    for(int i=0; i<size; i++)
+    {
+        sum+=some_array[i];
+    }
+    avg = sum/static_cast<double>(size);
+    return avg;
+}
 
 
 

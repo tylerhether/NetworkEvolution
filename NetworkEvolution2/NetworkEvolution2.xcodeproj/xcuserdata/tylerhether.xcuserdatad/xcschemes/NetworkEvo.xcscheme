@@ -64,7 +64,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-npops 20"
+            argument = "-npops 3"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -84,7 +84,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-reg_mu 0.002"
+            argument = "-reg_mu 0.0002"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -92,15 +92,15 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_start 200"
+            argument = "-x_start 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_start 200"
+            argument = "-y_start 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_opt 500"
+            argument = "-x_opt 700"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
