@@ -113,6 +113,9 @@ public:
     // For cleaning up.
     void deletePops_XYs();
     
+    // For estimating mean Absolute fitness
+    double meanAbsoluteFitness(int flag); // flag = 0 equals parental populations; 1 = hybrids
+    
     // Destroy Populations.
     ~Populations() // destructor
     {
@@ -135,7 +138,7 @@ double make_genos(double geno_value, double allelic_stdev);
 double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=500);
 
 void reg_mu(int indicator_int, string &network_char);
-double mean(double some_array[], int size);
+//double mean(double some_array[], int size);
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * *
@@ -174,7 +177,7 @@ int main(int argc, char *argv[])
     double rec(0.5);                  // This is the recombination rate between coding loci
     double m_rate(0.0);
 
-    int selection_mode(2);       // Advanced: 1 = "soft selection", any other integer = hard
+    int selection_mode(1);       // Advanced: 1 = "soft selection", any other integer = hard
     
     
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
@@ -434,17 +437,35 @@ int main(int argc, char *argv[])
     for(int g=1; g<(1+num_generations); g++){
         
         // Print Progress every 250 generations
-        if(g % 250 == 0) cout << "Generation " << g << endl;
+        if(g % 250 == 0) cout << "Generation " << g << "\t";
         
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod, 0);
         
         // Calculate Fitness:
         Pop.getFitness(0);
+        if(g % 250 == 0) cout << " | XP mean AbsW = " << Pop.meanAbsoluteFitness(0) << "\t";
         if(selection_mode==1)
         {
             Pop.getRelativeFitness();
         }
+        
+        if(g % 250 == 0)
+        {
+            // ESTIMATING HYBRID FITNESS
+            // 1 - Make hybrids
+            Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
+            
+            // 2 - calculate their phenotypes
+            Pop.getPheno(theta, gamma, *mod, 1);            // 1 is a flag for hybrids
+            
+            // 3 - calculate their absolute fitness
+            Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
+            cout << " | Hybrid mean AbsW = " << Pop.meanAbsoluteFitness(1) << "\n";
+        }
+        
+    
+        // Need output summary stats to file
         
         // Viability Selection:
         Pop.selection();
@@ -452,21 +473,9 @@ int main(int argc, char *argv[])
         // Recombine, mutate, and mate the survivers
         Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
 
-        // Need migration
+        //  Migrate
         Pop.migratePop(mMigrantArray, nrolls);
-        
-        // ESTIMATING HYBRID FITNESS
-        // 1 - Make hybrids
-        Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
-        
-        // 2 - calculate their phenotypes
-        Pop.getPheno(theta, gamma, *mod, 1);            // 1 is a flag for hybrids
-        
-        // 3 - calculate their absolute fitness
-        Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
-        
-        // Need output summary stats to file
-        
+    
     }
     
     Pop.getPheno(theta, gamma, *mod, 0);
@@ -475,7 +484,7 @@ int main(int argc, char *argv[])
     
     // Estimate the fitness of the hybrids:
 //    Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
-    Pop.printHybrids(10);
+    Pop.printHybrids(100);
     
     // Cleaning dynamically allocated memory
     delete[] mRecombinationArray;
@@ -1710,10 +1719,17 @@ void Populations::getRelativeFitness()
             }
         }
         
-        // Now divide the absolute fitness by the max fitness
+        // Now divide the absolute fitness by the max fitness.
+        // In the case that the max is 0, set all individuals to 1.
         for(int i=0; i<numInd; i++)
         {
-            xys[p][i].ww = (xys[p][i].ww / maxW);
+            if(maxW==0){
+               xys[p][i].ww = 1;
+            } else
+            {
+                xys[p][i].ww = (xys[p][i].ww / maxW);
+            }
+           
         }
     }
 }
@@ -1976,6 +1992,38 @@ void Populations::migratePop(int *mig_array, int rolls)
     }
     
 }
+
+double Populations::meanAbsoluteFitness(int flag)
+{
+    double avg(0.0);
+    double sum(0.0);
+    
+    if(flag==0)
+    {
+        for(int p=0; p<numPops; p++)
+        {
+            for(int i=0; i<numInd; i++)
+            {
+                sum+=xys[p][i].ww;
+                
+            }
+        }
+        avg = sum/static_cast<double>(numPops*numInd);
+    } else if(flag==1)
+    {
+        for(int i=0; i<numInd; i++)
+        {
+            sum+=xyw_hybrids[0][i].ww;
+
+        }
+        avg = sum/static_cast<double>(numInd);
+    }
+    
+    return avg;
+}
+
+
+
 
 /* * * * * * * * * * * * * * * * * * * * * * * *
  *                                              *
@@ -2703,17 +2751,6 @@ void reg_mu(int indicator_int, string &network_char)
     }
 }
 
-double mean(double some_array[], int size)
-{
-    double avg(0.0);
-    double sum(0.0);
-    for(int i=0; i<size; i++)
-    {
-        sum+=some_array[i];
-    }
-    avg = sum/static_cast<double>(size);
-    return avg;
-}
 
 
 
