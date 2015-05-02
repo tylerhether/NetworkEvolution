@@ -1,0 +1,4 @@
+Fitness data for generation 250 goes on this line
+Fitness data for generation 500 goes on this line
+Fitness data for generation 750 goes on this line
+Fitness data for generation 1000 goes on this line

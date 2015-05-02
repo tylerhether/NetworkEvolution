@@ -154,6 +154,18 @@ void reg_mu(int indicator_int, string &network_char);
 int main(int argc, char *argv[])
 {
     
+    // For outputing data to file:
+    ofstream phenotypes_file;
+    phenotypes_file.open ("phenotypes.txt");
+    
+    ofstream fitness_file;
+    fitness_file.open ("fitness.txt");
+    
+    
+    
+    
+    
+    
     // Seed random numbers
     srand((unsigned int)time(NULL));
     
@@ -436,11 +448,16 @@ int main(int argc, char *argv[])
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
         
+        
+        
         // Print Progress every 250 generations
         if(g % 250 == 0) cout << "Generation " << g << "\t";
         
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod, 0);
+        
+        phenotypes_file << "Phenotypic data for generation " << g << " goes on this line\n";
+        
         
         // Calculate Fitness:
         Pop.getFitness(0);
@@ -462,6 +479,8 @@ int main(int argc, char *argv[])
             // 3 - calculate their absolute fitness
             Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
             cout << " | Hybrid mean AbsW = " << Pop.meanAbsoluteFitness(1) << "\n";
+        
+            fitness_file << "Fitness data for generation " << g << " goes on this line\n";
         }
         
     
@@ -492,6 +511,12 @@ int main(int argc, char *argv[])
     delete[] mMutateCodingArray;
     delete[] mMutateRegulatoryArray;
     delete[] mMigrantArray;
+    
+    // Close output files
+    phenotypes_file.close();
+    fitness_file.close();
+
+    
     
     return 0;
 }
