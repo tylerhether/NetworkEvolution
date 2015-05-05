@@ -73,19 +73,19 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 1000"
+            argument = "-gen 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu 0.01"
+            argument = "-mu 0.02"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu_var 0.02"
+            argument = "-mu_var 0.1"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-reg_mu 0.002"
+            argument = "-reg_mu 0.0002"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -113,7 +113,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-sel_var 10000"
+            argument = "-sel_var 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -125,11 +125,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-theta 300"
+            argument = "-theta 300.0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gamma 1"
+            argument = "-gamma 1.0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -137,7 +137,15 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_deviation 5"
+            argument = "-start_deviation 2.0"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-selection_mode 1"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-output_freq 10"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

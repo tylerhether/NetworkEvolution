@@ -126,8 +126,8 @@ public:
     // Print population to screen (for debugging)
     void printPop(int flag); // flag==1 then print only the last flag individuals
     
-    // Calculate the fitness given the trait values, selection, and triat optimum
-    
+    // For output
+    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
 };
 
 // Forward Declarations of Functions:       // Can be moved to a header file if gets too long.
@@ -154,13 +154,11 @@ void reg_mu(int indicator_int, string &network_char);
 int main(int argc, char *argv[])
 {
     
-    // For outputing data to file:
-    ofstream phenotypes_file;
-    phenotypes_file.open ("phenotypes.txt");
+//    // For outputing data to file:
+//    ofstream phenotypes_file;
+//    phenotypes_file.open ("ouput-phenotypes.txt");
     
-    ofstream fitness_file;
-    fitness_file.open ("fitness.txt");
-    
+
     
     
     
@@ -191,6 +189,9 @@ int main(int argc, char *argv[])
 
     int selection_mode(1);       // Advanced: 1 = "soft selection", any other integer = hard
     
+    
+    double meanAbsFit(0);
+    int outputFreq(100);          // frequency of output
     
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
     for(int i=1; i<argc; i++){
@@ -223,11 +224,11 @@ int main(int argc, char *argv[])
             cout << "\tMigration rate = " << m_rate << endl;
         }
         if(string(argv[i]) == "-x_start"){
-            x1 = atoi(argv[i+1]);
+            x1 = atof(argv[i+1]);
             cout << "\tInitial mean trait x value = " << x1 << endl;
         }
         if(string(argv[i]) == "-y_start"){
-            x2 = atoi(argv[i+1]);
+            x2 = atof(argv[i+1]);
             cout << "\tInitial mean trait y value = " << x2 << endl;
         }
         if(string(argv[i]) == "-start_network"){
@@ -235,42 +236,65 @@ int main(int argc, char *argv[])
             cout << "\tInitial network architecture = " << reg_pattern << endl;
         }
         if(string(argv[i]) == "-theta"){
-            theta = atoi(argv[i+1]);
+            theta = atof(argv[i+1]);
             cout << "\ttheta = " << theta << endl;
         }
         if(string(argv[i]) == "-gamma"){
             cout << "\tgamma = " << argv[i+1] << endl;
-            theta = atoi(argv[i+1]);
+            gamma = atof(argv[i+1]);
         }
         if(string(argv[i]) == "-model"){
             mod = argv[i+1];
             cout << "\tRegulatory model = " << mod << endl;
         }
         if(string(argv[i]) == "-start_deviation"){
-            allelic_Stdev = atoi(argv[i+1]);
+            allelic_Stdev = atof(argv[i+1]);
             cout << "\tInitial standard deviation of allelic values = " << allelic_Stdev << endl;
         }
         if(string(argv[i]) == "-x_opt"){
-            XOPT = atoi(argv[i+1]);
+            XOPT = atof(argv[i+1]);
             cout << "\tTriat x's optimum = " << XOPT << endl;
         }
         if(string(argv[i]) == "-y_opt"){
-            YOPT = atoi(argv[i+1]);
+            YOPT = atof(argv[i+1]);
             cout << "\tTrait y's optimum = " << YOPT << endl;
         }
         if(string(argv[i]) == "-sel_var"){
-            OM11 = atoi(argv[i+1]);
+            OM11 = atof(argv[i+1]);
             cout << "\tVariance in stabilizing selection = " << OM11 << endl;
         }
         if(string(argv[i]) == "-sel_covar"){
-            OM12 = atoi(argv[i+1]);
+            OM12 = atof(argv[i+1]);
             cout << "\tCovariance in stabilizing selection = " << OM12 << endl;
         }
         if(string(argv[i]) == "-rec"){
             rec = atof(argv[i+1]);
             cout << "\tRecombination rate = " << rec << endl;
         }
-
+        if(string(argv[i]) == "-selection_mode"){
+            selection_mode = atoi(argv[i+1]);
+            if(selection_mode==0){
+                cout << "\tUsing hard selection" << endl;
+            } else if(selection_mode==1)
+            {
+                cout << "\tUsing soft selection" << endl;
+            } else
+            {
+                cout << "Error: please enter 0 for hard selection or 1 for soft selection. " << endl;
+                exit(5);
+            }
+            
+        }
+        if(string(argv[i]) == "-output_freq"){
+            outputFreq = atoi(argv[i+1]);
+            cout << "\tData will be written every " << outputFreq << " generations" << endl;
+            if(outputFreq<50)
+            {
+                cout << "\tWarning: output frequency is really low. Simulations will be slower.\n";
+            }
+        }
+        
+        
     }
     
     /*
@@ -426,6 +450,7 @@ int main(int argc, char *argv[])
     double a1, a2;
     
     // Find the genotypic values that make the starting two-trait phenotype
+//    cout << "Just checking, theta is: " << theta<<endl;
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
     
     // Initialize the populations by their...
@@ -451,23 +476,32 @@ int main(int argc, char *argv[])
         
         
         // Print Progress every 250 generations
-        if(g % 250 == 0) cout << "Generation " << g << "\t";
+        if(g % 250 == 0)
+        {
+            cout << "Generation " << g << "\n";
+        }
         
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod, 0);
         
-        phenotypes_file << "Phenotypic data for generation " << g << " goes on this line\n";
-        
-        
         // Calculate Fitness:
         Pop.getFitness(0);
-        if(g % 250 == 0) cout << " | XP mean AbsW = " << Pop.meanAbsoluteFitness(0) << "\t";
+        
+        if(g % outputFreq == 0)
+        {
+            meanAbsFit = Pop.meanAbsoluteFitness(0);
+            Pop.outputData(200, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 2, meanAbsFit);
+            Pop.outputData(numInds, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 0, meanAbsFit);
+//            cout << " | XP mean AbsW = " << meanAbsFit << "\t";
+        }
+        
         if(selection_mode==1)
         {
             Pop.getRelativeFitness();
+            
         }
         
-        if(g % 250 == 0)
+        if(g % outputFreq == 0)
         {
             // ESTIMATING HYBRID FITNESS
             // 1 - Make hybrids
@@ -478,13 +512,10 @@ int main(int argc, char *argv[])
             
             // 3 - calculate their absolute fitness
             Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
-            cout << " | Hybrid mean AbsW = " << Pop.meanAbsoluteFitness(1) << "\n";
-        
-            fitness_file << "Fitness data for generation " << g << " goes on this line\n";
+            meanAbsFit = Pop.meanAbsoluteFitness(1);
+            Pop.outputData(numInds, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 1, meanAbsFit);
+//            cout << " | Hybrid mean AbsW = " << meanAbsFit << "\n";
         }
-        
-    
-        // Need output summary stats to file
         
         // Viability Selection:
         Pop.selection();
@@ -502,7 +533,6 @@ int main(int argc, char *argv[])
     Pop.printPop(10);
     
     // Estimate the fitness of the hybrids:
-//    Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls);
     Pop.printHybrids(100);
     
     // Cleaning dynamically allocated memory
@@ -513,8 +543,8 @@ int main(int argc, char *argv[])
     delete[] mMigrantArray;
     
     // Close output files
-    phenotypes_file.close();
-    fitness_file.close();
+    
+    
 
     
     
@@ -842,153 +872,155 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
 
 void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY)
 {
+    using namespace std;
     //    cout << "model is: " << mod << endl;
     switch(mod)
     {
+            //\([\+\-]a\d+[\+\-]a\d+[\+\-]a\d+[\+\-]gamma\*theta\)\)\^2
         case 'A':
             if(r00 == "0" && r01 == "0" && r10=="0" && r11=="0"){
-                XX = (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma);
-                YY = (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma);
+                XX = (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow((-a11-a12+a21+a22+gamma*theta),2)))/(2*gamma);
+                YY = (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow((-a11-a12+a21+a22+gamma*theta),2)))/(2*gamma);
             }
             if(r00 == "0" && r01 == "0" && r10=="1" && r11=="0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a21+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*(a21+gamma*theta));
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a21+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a21+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*(a21+gamma*theta));
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a21+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
             }
             if(r00 == "0" && r01 == "0" && r10=="2" && r11=="0"){
-                XX = ((a11+a12-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((a11+a12-a22-gamma*theta)*exp(2)+4*(a11+a12)*(a21+gamma*theta))))/(2*(a21+gamma*theta));
-                YY = (-(a11+a12-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((a11+a12-a22-gamma*theta)*exp(2)+4*(a11+a12)*(a21+gamma*theta))))/(2*gamma*theta);
+                XX = ((a11+a12-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((a11+a12-a22-gamma*theta),2)+4*(a11+a12)*(a21+gamma*theta))))/(2*(a21+gamma*theta));
+                YY = (-(a11+a12-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((a11+a12-a22-gamma*theta),2)+4*(a11+a12)*(a21+gamma*theta))))/(2*gamma*theta);
             }
             if(r00 == "0" && r01 == "0" && r10=="0" && r11=="1"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a22+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*(a22+gamma*theta));
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a22+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a22+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*(a22+gamma*theta));
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a22+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
             }
             if(r00 == "0" && r01 == "0" && r10=="1" && r11=="1"){
                 XX = ((a11+a12)*theta)/(a21+a22+gamma*theta);
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "0" && r01 == "0" && r10=="2" && r11=="1"){
-                XX = (theta*(a11+a12-a22-gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+a12*exp(2)+(a22+gamma*theta)*exp(2)+2*a12*(2*a21+a22+gamma*theta)+2*a11*(a12+2*a21+a22+gamma*theta))))/(2*(a21+a22+gamma*theta));
-                YY = (-theta*(a11+a12-a22+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+a12*exp(2)+(a22+gamma*theta)*exp(2)+2*a12*(2*a21+a22+gamma*theta)+2*a11*(a12+2*a21+a22+gamma*theta))))/(2*gamma*theta);
+                XX = (theta*(a11+a12-a22-gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+pow(a12,2)+pow((a22+gamma*theta),2)+2*a12*(2*a21+a22+gamma*theta)+2*a11*(a12+2*a21+a22+gamma*theta))))/(2*(a21+a22+gamma*theta));
+                YY = (-theta*(a11+a12-a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+pow(a12,2)+pow((a22+gamma*theta),2)+2*a12*(2*a21+a22+gamma*theta)+2*a11*(a12+2*a21+a22+gamma*theta))))/(2*gamma*theta);
             }
             if(r00 == "0" && r01 == "0" && r10=="0" && r11=="2"){
-                XX = ((a11+a12-a21)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((a11+a12-a21-gamma*theta)*exp(2)+4*(a11+a12)*(a22+gamma*theta))))/(2*(a22+gamma*theta));
-                YY = (-(a11+a12-a21)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((a11+a12-a21-gamma*theta)*exp(2)+4*(a11+a12)*(a22+gamma*theta))))/(2*gamma*theta);
+                XX = ((a11+a12-a21)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((a11+a12-a21-gamma*theta),2)+4*(a11+a12)*(a22+gamma*theta))))/(2*(a22+gamma*theta));
+                YY = (-(a11+a12-a21)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((a11+a12-a21-gamma*theta),2)+4*(a11+a12)*(a22+gamma*theta))))/(2*gamma*theta);
             }
             if(r00 == "0" && r01 == "0" && r10=="1" && r11=="2"){
-                XX = (theta*(a11+a12-a21-gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+a12*exp(2)+(a21+gamma*theta)*exp(2)+2*a12*(a21+2*a22+gamma*theta)+2*a11*(a12+a21+2*a22+gamma*theta))))/(2*(a21+a22+gamma*theta));
-                YY = (-theta*(a11+a12-a21+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+a12*exp(2)+(a21+gamma*theta)*exp(2)+2*a12*(a21+2*a22+gamma*theta)+2*a11*(a12+a21+2*a22+gamma*theta))))/(2*gamma*theta);
+                XX = (theta*(a11+a12-a21-gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+pow(a12,2)+pow((a21+gamma*theta),2)+2*a12*(a21+2*a22+gamma*theta)+2*a11*(a12+a21+2*a22+gamma*theta))))/(2*(a21+a22+gamma*theta));
+                YY = (-theta*(a11+a12-a21+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+pow(a12,2)+pow((a21+gamma*theta),2)+2*a12*(a21+2*a22+gamma*theta)+2*a11*(a12+a21+2*a22+gamma*theta))))/(2*gamma*theta);
             }
             if(r00 == "0" && r01 == "0" && r10=="2" && r11=="2"){
-                XX = ((a11+a12)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((a11+a12-gamma*theta)*exp(2)+4*(a11+a12)*(a21+a22+gamma*theta))))/(2*(a21+a22+gamma*theta));
-                YY = (-theta*(a11+a12+gamma*theta)+sqrt(theta*exp(2)*((a11+a12)*(a11+a12+4*(a21+a22))+2*(a11+a12)*gamma*theta+gamma*exp(2)*theta*exp(2))))/(2*gamma*theta);
+                XX = ((a11+a12)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((a11+a12-gamma*theta),2)+4*(a11+a12)*(a21+a22+gamma*theta))))/(2*(a21+a22+gamma*theta));
+                YY = (-theta*(a11+a12+gamma*theta)+sqrt(pow(theta, 2)*((a11+a12)*(a11+a12+4*(a21+a22))+2*(a11+a12)*gamma*theta+pow(gamma, 2)*pow(theta, 2))))/(2*gamma*theta);
             }
             if(r00 == "1" && r01 == "0" && r10=="0" && r11=="0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a11+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a11+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*(a11+gamma*theta));
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a11+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a11+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*(a11+gamma*theta));
             }
             if(r00 == "1" && r01 == "0" && r10=="1" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
             }
             if(r00 == "1" && r01 == "0" && r10=="2" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(a21+gamma*theta)-gamma*theta*(-a12+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+(a11*(a21+gamma*theta)-gamma*theta*(-a12+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21-gamma*theta)-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+(a11*(a21+gamma*theta)-gamma*theta*(-a12+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(a21+gamma*theta)-gamma*theta*(-a12+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+pow((a11*(a21+gamma*theta)-gamma*theta*(-a12+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21-gamma*theta)-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+pow((a11*(a21+gamma*theta)-gamma*theta*(-a12+a22+gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "0" && r10=="0" && r11=="1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a22-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a22-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
             }
             if(r00 == "1" && r01 == "0" && r10=="1" && r11=="1"){
                 XX = (a11*(a21+a22)+(a11+a12)*gamma*theta)/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "1" && r01 == "0" && r10=="2" && r11=="1"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a22+gamma*theta)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a22+gamma*theta)-a11*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21+a22-gamma*theta)-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a22+gamma*theta)-a11*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a22+gamma*theta)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a22+gamma*theta)-a11*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21+a22-gamma*theta)-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a22+gamma*theta)-a11*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "0" && r10=="0" && r11=="2"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a12+a21+gamma*theta)+a11*(a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+gamma*theta)-a11*(a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a22-gamma*theta)-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+gamma*theta)-a11*(a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a12+a21+gamma*theta)+a11*(a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+gamma*theta)-a11*(a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a22-gamma*theta)-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+gamma*theta)-a11*(a22+gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "0" && r10=="1" && r11=="2"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a21+gamma*theta)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+gamma*theta)-a11*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21+a22-gamma*theta)-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+gamma*theta)-a11*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a21+gamma*theta)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+gamma*theta)-a11*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21+a22-gamma*theta)-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+gamma*theta)-a11*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "0" && r10=="2" && r11=="2"){
-                XX = (gamma*theta*(a12-gamma*theta)+a11*(a21+a22+gamma*theta)+sqrt(4*(a11+a12)*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(gamma*theta*(a12-gamma*theta)+a11*(a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a11*(a21+a22-gamma*theta)-gamma*theta*(a12+gamma*theta)+sqrt(4*(a11+a12)*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(gamma*theta*(a12-gamma*theta)+a11*(a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (gamma*theta*(a12-gamma*theta)+a11*(a21+a22+gamma*theta)+sqrt(4*(a11+a12)*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((gamma*theta*(a12-gamma*theta)+a11*(a21+a22+gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a11*(a21+a22-gamma*theta)-gamma*theta*(a12+gamma*theta)+sqrt(4*(a11+a12)*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((gamma*theta*(a12-gamma*theta)+a11*(a21+a22+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="0" && r11=="0"){
-                XX = (a12*theta-theta*(a21+a22+gamma*theta)+sqrt(theta*exp(2)*(a12*exp(2)+4*a11*(a21+a22)-2*a12*(a21+a22-gamma*theta)+(a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = (-a12*theta+a21*theta+a22*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a12+a21+a22-gamma*theta)*exp(2)+4*(a21+a22)*(a11+gamma*theta))))/(2*(a11+gamma*theta));
+                XX = (a12*theta-theta*(a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a12,2)+4*a11*(a21+a22)-2*a12*(a21+a22-gamma*theta)+pow((a21+a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = (-a12*theta+a21*theta+a22*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow(-a12+a21+a22-gamma*theta,2)+4*(a21+a22)*(a11+gamma*theta))))/(2*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="1" && r11=="0"){
-                XX = (a11*a21-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+(a11*a21-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+gamma*theta));
-                YY = (a11*a21+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+(a11*a21-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*a21-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+pow((a11*a21-gamma*theta*(-a12+a21+a22+gamma*theta)),2)))/(2*gamma*(a21+gamma*theta));
+                YY = (a11*a21+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+pow((a11*a21-gamma*theta*(-a12+a21+a22+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="2" && r11=="0"){
-                XX = (a11*a21-gamma*theta*(-a12+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+a12*gamma*theta)+(a11*a21-gamma*theta*(-a12+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+gamma*theta));
-                YY = (a11*a21-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+a12*gamma*theta)+(a11*a21-gamma*theta*(-a12+a22+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*a21-gamma*theta*(-a12+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+a12*gamma*theta)+pow((a11*a21-gamma*theta*(-a12+a22+gamma*theta)),2)))/(2*gamma*(a21+gamma*theta));
+                YY = (a11*a21-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*a22+a12*gamma*theta)+pow((a11*a21-gamma*theta*(-a12+a22+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="0" && r11=="1"){
-                XX = (a11*a22-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+(a11*a22-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a22+gamma*theta));
-                YY = (a11*a22+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+(a11*a22-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*a22-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+pow((a11*a22-gamma*theta*(-a12+a21+a22+gamma*theta)),2)))/(2*gamma*(a22+gamma*theta));
+                YY = (a11*a22+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+a12*gamma*theta)+pow((a11*a22-gamma*theta*(-a12+a21+a22+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="1" && r11=="1"){
                 XX = (a11*(a21+a22)+a12*gamma*theta)/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "2" && r01 == "0" && r10=="2" && r11=="1"){
-                XX = (a11*(a21+a22)-gamma*theta*(-a12+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(-a12+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a11*(a21+a22)-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(-a12+a22+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*(a21+a22)-gamma*theta*(-a12+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(-a12+a22+gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a11*(a21+a22)-gamma*theta*(a12-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a22+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(-a12+a22+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="0" && r11=="2"){
-                XX = (a11*a22-gamma*theta*(-a12+a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+a12*gamma*theta)+(a11*a22-gamma*theta*(-a12+a21+gamma*theta))*exp(2)))/(2*gamma*(a22+gamma*theta));
-                YY = (a11*a22-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+a12*gamma*theta)+(a11*a22-gamma*theta*(-a12+a21+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*a22-gamma*theta*(-a12+a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+a12*gamma*theta)+pow((a11*a22-gamma*theta*(-a12+a21+gamma*theta)),2)))/(2*gamma*(a22+gamma*theta));
+                YY = (a11*a22-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*a21+a12*gamma*theta)+pow((a11*a22-gamma*theta*(-a12+a21+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="1" && r11=="2"){
-                XX = (a11*(a21+a22)-gamma*theta*(-a12+a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(-a12+a21+gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a11*(a21+a22)-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(-a12+a21+gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*(a21+a22)-gamma*theta*(-a12+a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(-a12+a21+gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a11*(a21+a22)-gamma*theta*(a12-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a11*a21+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(-a12+a21+gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "2" && r01 == "0" && r10=="2" && r11=="2"){
-                XX = (a11*(a21+a22)+gamma*theta*(a12-gamma*theta)+sqrt(4*a12*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(a11*(a21+a22)+gamma*theta*(a12-gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a11*(a21+a22)-gamma*theta*(a12+gamma*theta)+sqrt(4*a12*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(a11*(a21+a22)+gamma*theta*(a12-gamma*theta))*exp(2)))/(2*gamma*(a11+gamma*theta));
+                XX = (a11*(a21+a22)+gamma*theta*(a12-gamma*theta)+sqrt(4*a12*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((a11*(a21+a22)+gamma*theta*(a12-gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a11*(a21+a22)-gamma*theta*(a12+gamma*theta)+sqrt(4*a12*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((a11*(a21+a22)+gamma*theta*(a12-gamma*theta)),2)))/(2*gamma*(a11+gamma*theta));
             }
             if(r00 == "0" && r01 == "1" && r10=="0" && r11=="0"){
-                XX = (a11*theta-theta*(-a12+a21+a22+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+2*a11*(a12-a21-a22+gamma*theta)+(a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a12+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*(a12+gamma*theta));
+                XX = (a11*theta-theta*(-a12+a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+2*a11*(a12-a21-a22+gamma*theta)+pow((a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "1" && r10=="1" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             if(r00 == "0" && r01 == "1" && r10=="2" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(a21+gamma*theta)-gamma*theta*(-a11+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+(a12*(a21+gamma*theta)-gamma*theta*(-a11+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21-gamma*theta)-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+(a12*(a21+gamma*theta)-gamma*theta*(-a11+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(a21+gamma*theta)-gamma*theta*(-a11+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+pow((a12*(a21+gamma*theta)-gamma*theta*(-a11+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21-gamma*theta)-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+pow((a12*(a21+gamma*theta)-gamma*theta*(-a11+a22+gamma*theta)),2)));
             }
             if(r00 == "0" && r01 == "1" && r10=="0" && r11=="1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a22-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a22-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             if(r00 == "0" && r01 == "1" && r10=="1" && r11=="1"){
                 XX = (a12*(a21+a22)+(a11+a12)*gamma*theta)/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "0" && r01 == "1" && r10=="2" && r11=="1"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a22+gamma*theta)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a22+gamma*theta)-a12*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21+a22-gamma*theta)-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a22+gamma*theta)-a12*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a22+gamma*theta)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a22+gamma*theta)-a12*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21+a22-gamma*theta)-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a22+gamma*theta)-a12*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "0" && r01 == "1" && r10=="0" && r11=="2"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a11+a21+gamma*theta)+a12*(a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+gamma*theta)-a12*(a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a22-gamma*theta)-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+gamma*theta)-a12*(a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a11+a21+gamma*theta)+a12*(a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+gamma*theta)-a12*(a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a22-gamma*theta)-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+gamma*theta)-a12*(a22+gamma*theta)),2)));
             }
             if(r00 == "0" && r01 == "1" && r10=="1" && r11=="2"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a21+gamma*theta)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+gamma*theta)-a12*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21+a22-gamma*theta)-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+gamma*theta)-a12*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a21+gamma*theta)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+gamma*theta)-a12*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21+a22-gamma*theta)-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+gamma*theta)-a12*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "0" && r01 == "1" && r10=="2" && r11=="2"){
-                XX = (gamma*theta*(a11-gamma*theta)+a12*(a21+a22+gamma*theta)+sqrt(4*(a11+a12)*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(gamma*theta*(a11-gamma*theta)+a12*(a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a12*(a21+a22-gamma*theta)-gamma*theta*(a11+gamma*theta)+sqrt(4*(a11+a12)*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(gamma*theta*(a11-gamma*theta)+a12*(a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (gamma*theta*(a11-gamma*theta)+a12*(a21+a22+gamma*theta)+sqrt(4*(a11+a12)*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((gamma*theta*(a11-gamma*theta)+a12*(a21+a22+gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a12*(a21+a22-gamma*theta)-gamma*theta*(a11+gamma*theta)+sqrt(4*(a11+a12)*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((gamma*theta*(a11-gamma*theta)+a12*(a21+a22+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "1" && r01 == "1" && r10=="0" && r11=="0"){
                 XX = (a11+a12)/gamma;
@@ -1027,173 +1059,173 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
                 YY = ((a11+a12)*(a21+a22))/(gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "1" && r10=="0" && r11=="0"){
-                XX = (a12*theta-theta*(a21+a22+gamma*theta)+sqrt(theta*exp(2)*(4*a11*(a21+a22)+(a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = (theta*(-a12+a21+a22-gamma*theta)+sqrt(theta*exp(2)*(4*a11*(a21+a22)+(a12+a21+a22+gamma*theta)*exp(2))))/(2*(a11+a12+gamma*theta));
+                XX = (a12*theta-theta*(a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(4*a11*(a21+a22)+pow((a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = (theta*(-a12+a21+a22-gamma*theta)+sqrt(pow(theta, 2)*(4*a11*(a21+a22)+pow((a12+a21+a22+gamma*theta),2))))/(2*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "1" && r10=="1" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*(a21+gamma*theta)-gamma*theta*(a21+a22+gamma*theta)+sqrt(a11*exp(2)*a21*exp(2)+(a12*(a21+gamma*theta)+gamma*theta*(a21+a22+gamma*theta))*exp(2)+2*a11*(a12*a21*(a21+gamma*theta)+gamma*theta*(a21*(a21+a22)+(a21+2*a22)*gamma*theta))));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a21+(a21+a22)*gamma*theta)+(a11*a21+a12*(a21-gamma*theta)+gamma*theta*(a21+a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*(a21+gamma*theta)-gamma*theta*(a21+a22+gamma*theta)+sqrt(pow(a11,2)*pow(a21,2)+pow((a12*(a21+gamma*theta)+gamma*theta*(a21+a22+gamma*theta)),2)+2*a11*(a12*a21*(a21+gamma*theta)+gamma*theta*(a21*(a21+a22)+(a21+2*a22)*gamma*theta))));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a21+(a21+a22)*gamma*theta)+pow((a11*a21+a12*(a21-gamma*theta)+gamma*theta*(a21+a22-gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "1" && r10=="2" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*a21+a12*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a21+a22*gamma*theta)+(a11*a21+a12*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a12*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a21+a22*gamma*theta)+(a11*a21+a12*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*a21+a12*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a21+a22*gamma*theta)+pow((a11*a21+a12*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a12*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a21+a22*gamma*theta)+pow((a11*a21+a12*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "1" && r10=="0" && r11=="1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*(a22+gamma*theta)-gamma*theta*(a21+a22+gamma*theta)+sqrt(a11*exp(2)*a22*exp(2)+(a12*(a22+gamma*theta)+gamma*theta*(a21+a22+gamma*theta))*exp(2)+2*a11*(a12*a22*(a22+gamma*theta)+gamma*theta*(a22*(a21+a22)+(2*a21+a22)*gamma*theta))));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a22+(a21+a22)*gamma*theta)+(a11*a22+a12*(a22-gamma*theta)+gamma*theta*(a21+a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*(a22+gamma*theta)-gamma*theta*(a21+a22+gamma*theta)+sqrt(pow(a11,2)*pow(a22,2)+pow((a12*(a22+gamma*theta)+gamma*theta*(a21+a22+gamma*theta)),2)+2*a11*(a12*a22*(a22+gamma*theta)+gamma*theta*(a22*(a21+a22)+(2*a21+a22)*gamma*theta))));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a22+(a21+a22)*gamma*theta)+pow((a11*a22+a12*(a22-gamma*theta)+gamma*theta*(a21+a22-gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "1" && r10=="1" && r11=="1"){
                 XX = ((a11+a12)*(a21+a22)+a12*gamma*theta)/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "2" && r01 == "1" && r10=="2" && r11=="1"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a11*a21+a11*a22-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(a22+gamma*theta)+a12*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a11*a22+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a12*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(a22+gamma*theta)+a12*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a11*a21+a11*a22-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(a22+gamma*theta)+a12*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a11*a22+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a12*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(a22+gamma*theta)+a12*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "1" && r10=="0" && r11=="2"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*a22+a12*gamma*theta-a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a22+a21*gamma*theta)+(a11*a22+gamma*theta*(a21-gamma*theta)+a12*(a22-gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a12*gamma*theta+a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a22+a21*gamma*theta)+(a11*a22+gamma*theta*(a21-gamma*theta)+a12*(a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*a22+a12*gamma*theta-a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a22+a21*gamma*theta)+pow((a11*a22+gamma*theta*(a21-gamma*theta)+a12*(a22-gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a12*gamma*theta+a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a12*a22+a21*gamma*theta)+pow((a11*a22+gamma*theta*(a21-gamma*theta)+a12*(a22-gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "1" && r10=="1" && r11=="2"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a11*a21+a11*a22-a21*gamma*theta-gamma*exp(2)*theta*exp(2)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(a21+gamma*theta)+a12*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a11*a22+a21*gamma*theta-gamma*exp(2)*theta*exp(2)+a12*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a12*gamma*theta)+(a11*(a21+a22)-gamma*theta*(a21+gamma*theta)+a12*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a11*a21+a11*a22-a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a12*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(a21+gamma*theta)+a12*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a11*a22+a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a12*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a12*gamma*theta)+pow((a11*(a21+a22)-gamma*theta*(a21+gamma*theta)+a12*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "1" && r10=="2" && r11=="2"){
-                XX = (a11*a21+a11*a22-gamma*exp(2)*theta*exp(2)+a12*(a21+a22+gamma*theta)+sqrt(4*a12*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+((a11+a12)*(a21+a22)+a12*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a11*a21+a11*a22-gamma*exp(2)*theta*exp(2)+a12*(a21+a22-gamma*theta)+sqrt(4*a12*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+((a11+a12)*(a21+a22)+a12*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)))/(2*gamma*(a11+a12+gamma*theta));
+                XX = (a11*a21+a11*a22-pow(gamma, 2)*pow(theta, 2)+a12*(a21+a22+gamma*theta)+sqrt(4*a12*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow(((a11+a12)*(a21+a22)+a12*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a11*a21+a11*a22-pow(gamma, 2)*pow(theta, 2)+a12*(a21+a22-gamma*theta)+sqrt(4*a12*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow(((a11+a12)*(a21+a22)+a12*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)))/(2*gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="0" && r11=="0"){
-                XX = ((a11-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11+a21+a22-gamma*theta)*exp(2)+4*(a21+a22)*(a12+gamma*theta))))/(2*gamma*theta);
-                YY = (-a11*theta+a21*theta+a22*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11+a21+a22-gamma*theta)*exp(2)+4*(a21+a22)*(a12+gamma*theta))))/(2*(a12+gamma*theta));
+                XX = ((a11-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow(-a11+a21+a22-gamma*theta,2)+4*(a21+a22)*(a12+gamma*theta))))/(2*gamma*theta);
+                YY = (-a11*theta+a21*theta+a22*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow(-a11+a21+a22-gamma*theta,2)+4*(a21+a22)*(a12+gamma*theta))))/(2*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="1" && r11=="0"){
-                XX = (a12*a21-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+(a12*a21-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+gamma*theta));
-                YY = (a12*a21+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+(a12*a21-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*a21-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+pow((a12*a21-gamma*theta*(-a11+a21+a22+gamma*theta)),2)))/(2*gamma*(a21+gamma*theta));
+                YY = (a12*a21+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+pow((a12*a21-gamma*theta*(-a11+a21+a22+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="2" && r11=="0"){
-                XX = (a12*a21-gamma*theta*(-a11+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+a11*gamma*theta)+(a12*a21-gamma*theta*(-a11+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+gamma*theta));
-                YY = (a12*a21-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+a11*gamma*theta)+(a12*a21-gamma*theta*(-a11+a22+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*a21-gamma*theta*(-a11+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+a11*gamma*theta)+pow((a12*a21-gamma*theta*(-a11+a22+gamma*theta)),2)))/(2*gamma*(a21+gamma*theta));
+                YY = (a12*a21-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*a22+a11*gamma*theta)+pow((a12*a21-gamma*theta*(-a11+a22+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="0" && r11=="1"){
-                XX = (a12*a22-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+(a12*a22-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a22+gamma*theta));
-                YY = (a12*a22+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+(a12*a22-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*a22-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+pow((a12*a22-gamma*theta*(-a11+a21+a22+gamma*theta)),2)))/(2*gamma*(a22+gamma*theta));
+                YY = (a12*a22+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+a11*gamma*theta)+pow((a12*a22-gamma*theta*(-a11+a21+a22+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="1" && r11=="1"){
                 XX = (a12*(a21+a22)+a11*gamma*theta)/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "0" && r01 == "2" && r10=="2" && r11=="1"){
-                XX = (a12*(a21+a22)-gamma*theta*(-a11+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(-a11+a22+gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a12*(a21+a22)-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(-a11+a22+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*(a21+a22)-gamma*theta*(-a11+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(-a11+a22+gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a12*(a21+a22)-gamma*theta*(a11-a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a22+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(-a11+a22+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="0" && r11=="2"){
-                XX = (a12*a22-gamma*theta*(-a11+a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+a11*gamma*theta)+(a12*a22-gamma*theta*(-a11+a21+gamma*theta))*exp(2)))/(2*gamma*(a22+gamma*theta));
-                YY = (a12*a22-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+a11*gamma*theta)+(a12*a22-gamma*theta*(-a11+a21+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*a22-gamma*theta*(-a11+a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+a11*gamma*theta)+pow((a12*a22-gamma*theta*(-a11+a21+gamma*theta)),2)))/(2*gamma*(a22+gamma*theta));
+                YY = (a12*a22-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*a21+a11*gamma*theta)+pow((a12*a22-gamma*theta*(-a11+a21+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="1" && r11=="2"){
-                XX = (a12*(a21+a22)-gamma*theta*(-a11+a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(-a11+a21+gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a12*(a21+a22)-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(-a11+a21+gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*(a21+a22)-gamma*theta*(-a11+a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(-a11+a21+gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a12*(a21+a22)-gamma*theta*(a11-a21+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*(a12*a21+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(-a11+a21+gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "0" && r01 == "2" && r10=="2" && r11=="2"){
-                XX = (a12*(a21+a22)+gamma*theta*(a11-gamma*theta)+sqrt(4*a11*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(a12*(a21+a22)+gamma*theta*(a11-gamma*theta))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a12*(a21+a22)-gamma*theta*(a11+gamma*theta)+sqrt(4*a11*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+(a12*(a21+a22)+gamma*theta*(a11-gamma*theta))*exp(2)))/(2*gamma*(a12+gamma*theta));
+                XX = (a12*(a21+a22)+gamma*theta*(a11-gamma*theta)+sqrt(4*a11*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((a12*(a21+a22)+gamma*theta*(a11-gamma*theta)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a12*(a21+a22)-gamma*theta*(a11+gamma*theta)+sqrt(4*a11*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow((a12*(a21+a22)+gamma*theta*(a11-gamma*theta)),2)))/(2*gamma*(a12+gamma*theta));
             }
             if(r00 == "1" && r01 == "2" && r10=="0" && r11=="0"){
-                XX = (-theta*(-a11+a21+a22+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+4*a12*(a21+a22)+2*a11*(a21+a22+gamma*theta)+(a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = (theta*(-a11+a21+a22-gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+4*a12*(a21+a22)+2*a11*(a21+a22+gamma*theta)+(a21+a22+gamma*theta)*exp(2))))/(2*(a11+a12+gamma*theta));
+                XX = (-theta*(-a11+a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+4*a12*(a21+a22)+2*a11*(a21+a22+gamma*theta)+pow((a21+a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = (theta*(-a11+a21+a22-gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+4*a12*(a21+a22)+2*a11*(a21+a22+gamma*theta)+pow((a21+a22+gamma*theta),2))))/(2*(a11+a12+gamma*theta));
             }
             if(r00 == "1" && r01 == "2" && r10=="1" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*a21+a11*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+(a21+a22)*gamma*theta)+(a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a21+a22-gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a11*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+(a21+a22)*gamma*theta)+(a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a21+a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*a21+a11*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+(a21+a22)*gamma*theta)+pow((a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a21+a22-gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a11*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+(a21+a22)*gamma*theta)+pow((a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a21+a22-gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "2" && r10=="2" && r11=="0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*a21+a11*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+a22*gamma*theta)+(a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a11*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+a22*gamma*theta)+(a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+a12*a21+a11*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+a22*gamma*theta)+pow((a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a21+a12*a21-a11*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a21+a22*gamma*theta)+pow((a12*a21+a11*(a21-gamma*theta)+gamma*theta*(a22-gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "2" && r10=="0" && r11=="1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*a22+a11*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+(a21+a22)*gamma*theta)+(a12*a22+a11*(a22-gamma*theta)+gamma*theta*(a21+a22-gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a11*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+(a21+a22)*gamma*theta)+(a12*a22+a11*(a22-gamma*theta)+gamma*theta*(a21+a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*a22+a11*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+(a21+a22)*gamma*theta)+pow((a12*a22+a11*(a22-gamma*theta)+gamma*theta*(a21+a22-gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a11*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+(a21+a22)*gamma*theta)+pow((a12*a22+a11*(a22-gamma*theta)+gamma*theta*(a21+a22-gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "2" && r10=="1" && r11=="1"){
                 XX = ((a11+a12)*(a21+a22)+a11*gamma*theta)/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "1" && r01 == "2" && r10=="2" && r11=="1"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(a22+gamma*theta)+a11*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(a22+gamma*theta)+a11*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(a22+gamma*theta)+a11*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a22+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(a22+gamma*theta)+a11*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "2" && r10=="0" && r11=="2"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*a22+a11*gamma*theta-a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+a21*gamma*theta)+(a12*a22+gamma*theta*(a21-gamma*theta)+a11*(a22-gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a11*gamma*theta+a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+a21*gamma*theta)+(a12*a22+gamma*theta*(a21-gamma*theta)+a11*(a22-gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+a12*a22+a11*gamma*theta-a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+a21*gamma*theta)+pow((a12*a22+gamma*theta*(a21-gamma*theta)+a11*(a22-gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a11*a22+a12*a22-a11*gamma*theta+a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+a12+gamma*theta)*(a11*a22+a21*gamma*theta)+pow((a12*a22+gamma*theta*(a21-gamma*theta)+a11*(a22-gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "2" && r10=="1" && r11=="2"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22-a21*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(a21+gamma*theta)+a11*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a21*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a11*gamma*theta)+(a12*(a21+a22)-gamma*theta*(a21+gamma*theta)+a11*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22-a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(a21+gamma*theta)+a11*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+a22+gamma*theta)*((a11+a12)*a21+a11*gamma*theta)+pow((a12*(a21+a22)-gamma*theta*(a21+gamma*theta)+a11*(a21+a22+gamma*theta)),2)));
             }
             if(r00 == "1" && r01 == "2" && r10=="2" && r11=="2"){
-                XX = (a12*a21+a12*a22-gamma*exp(2)*theta*exp(2)+a11*(a21+a22+gamma*theta)+sqrt(4*a11*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+((a11+a12)*(a21+a22)+a11*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)))/(2*gamma*(a21+a22+gamma*theta));
-                YY = (a12*a21+a12*a22-gamma*exp(2)*theta*exp(2)+a11*(a21+a22-gamma*theta)+sqrt(4*a11*gamma*exp(2)*theta*exp(2)*(a21+a22+gamma*theta)+((a11+a12)*(a21+a22)+a11*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)))/(2*gamma*(a11+a12+gamma*theta));
+                XX = (a12*a21+a12*a22-pow(gamma, 2)*pow(theta, 2)+a11*(a21+a22+gamma*theta)+sqrt(4*a11*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow(((a11+a12)*(a21+a22)+a11*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)))/(2*gamma*(a21+a22+gamma*theta));
+                YY = (a12*a21+a12*a22-pow(gamma, 2)*pow(theta, 2)+a11*(a21+a22-gamma*theta)+sqrt(4*a11*pow(gamma, 2)*pow(theta, 2)*(a21+a22+gamma*theta)+pow(((a11+a12)*(a21+a22)+a11*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)))/(2*gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "2" && r10=="0" && r11=="0"){
-                XX = (-theta*(a21+a22+gamma*theta)+sqrt(theta*exp(2)*(4*a11*(a21+a22)+4*a12*(a21+a22)+(a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = (theta*(a21+a22-gamma*theta)+sqrt(theta*exp(2)*(4*a11*(a21+a22)+4*a12*(a21+a22)+(a21+a22+gamma*theta)*exp(2))))/(2*(a11+a12+gamma*theta));
+                XX = (-theta*(a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(4*a11*(a21+a22)+4*a12*(a21+a22)+pow((a21+a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = (theta*(a21+a22-gamma*theta)+sqrt(pow(theta, 2)*(4*a11*(a21+a22)+4*a12*(a21+a22)+pow((a21+a22+gamma*theta),2))))/(2*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "2" && r10=="1" && r11=="0"){
-                XX = (a11*a21+a12*a21-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a21+a22)*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+(a11*a21+a12*a21+gamma*theta*(a21+a22-gamma*theta))*exp(2)))/(2*gamma*(a21+gamma*theta));
-                YY = (a11*a21+a12*a21+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a21+a22)*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+(a11*a21+a12*a21+gamma*theta*(a21+a22-gamma*theta))*exp(2)))/(2*gamma*(a11+a12+gamma*theta));
+                XX = (a11*a21+a12*a21-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a21+a22)*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow((a11*a21+a12*a21+gamma*theta*(a21+a22-gamma*theta)),2)))/(2*gamma*(a21+gamma*theta));
+                YY = (a11*a21+a12*a21+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a21+a22)*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow((a11*a21+a12*a21+gamma*theta*(a21+a22-gamma*theta)),2)))/(2*gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "2" && r10=="2" && r11=="0"){
-                XX = (a11*a21+a12*a21-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*a22*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+((a11+a12)*a21+gamma*theta*(a22-gamma*theta))*exp(2)))/(2*gamma*(a21+gamma*theta));
-                YY = (a11*a21+a12*a21+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*a22*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+((a11+a12)*a21+gamma*theta*(a22-gamma*theta))*exp(2)))/(2*gamma*(a11+a12+gamma*theta));
+                XX = (a11*a21+a12*a21-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*a22*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow(((a11+a12)*a21+gamma*theta*(a22-gamma*theta)),2)))/(2*gamma*(a21+gamma*theta));
+                YY = (a11*a21+a12*a21+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*a22*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow(((a11+a12)*a21+gamma*theta*(a22-gamma*theta)),2)))/(2*gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "2" && r10=="0" && r11=="1"){
-                XX = (a11*a22+a12*a22-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a21+a22)*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+(a11*a22+a12*a22+gamma*theta*(a21+a22-gamma*theta))*exp(2)))/(2*gamma*(a22+gamma*theta));
-                YY = (a11*a22+a12*a22+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a21+a22)*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+(a11*a22+a12*a22+gamma*theta*(a21+a22-gamma*theta))*exp(2)))/(2*gamma*(a11+a12+gamma*theta));
+                XX = (a11*a22+a12*a22-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a21+a22)*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow(a11*a22+a12*a22+gamma*theta*(a21+a22-gamma*theta),2)))/(2*gamma*(a22+gamma*theta));
+                YY = (a11*a22+a12*a22+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a21+a22)*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow(a11*a22+a12*a22+gamma*theta*(a21+a22-gamma*theta),2)))/(2*gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "2" && r10=="1" && r11=="1"){
                 XX = ((a11+a12)*(a21+a22))/(gamma*(a21+a22+gamma*theta));
                 YY = (a21+a22)/gamma;
             }
             if(r00 == "2" && r01 == "2" && r10=="2" && r11=="1"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*a22*gamma*theta*(a21+a22+gamma*theta)+(a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*a22*gamma*theta*(a21+a22+gamma*theta)+(a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*a22*gamma*theta*(a21+a22+gamma*theta)+pow((a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*a22*gamma*theta*(a21+a22+gamma*theta)+pow((a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a22+gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "2" && r10=="0" && r11=="2"){
-                XX = (a11*a22+a12*a22-a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*a21*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+((a11+a12)*a22+gamma*theta*(a21-gamma*theta))*exp(2)))/(2*gamma*(a22+gamma*theta));
-                YY = (a11*a22+a12*a22+a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*a21*gamma*exp(2)*theta*exp(2)*(a11+a12+gamma*theta)+((a11+a12)*a22+gamma*theta*(a21-gamma*theta))*exp(2)))/(2*gamma*(a11+a12+gamma*theta));
+                XX = (a11*a22+a12*a22-a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*a21*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow(((a11+a12)*a22+gamma*theta*(a21-gamma*theta)),2)))/(2*gamma*(a22+gamma*theta));
+                YY = (a11*a22+a12*a22+a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*a21*pow(gamma, 2)*pow(theta, 2)*(a11+a12+gamma*theta)+pow(((a11+a12)*a22+gamma*theta*(a21-gamma*theta)),2)))/(2*gamma*(a11+a12+gamma*theta));
             }
             if(r00 == "2" && r01 == "2" && r10=="1" && r11=="2"){
-                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)-a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*a21*gamma*theta*(a21+a22+gamma*theta)+(a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a21+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)+a21*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*a21*gamma*theta*(a21+a22+gamma*theta)+(a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a21+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+a22+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)-a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*a21*gamma*theta*(a21+a22+gamma*theta)+pow((a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a21+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+a12+gamma*theta)))*(a12*a21+a12*a22+a11*(a21+a22)+a21*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*a21*gamma*theta*(a21+a22+gamma*theta)+pow((a11*(a21+a22)+a12*(a21+a22)-gamma*theta*(a21+gamma*theta)),2)));
             }
             if(r00 == "2" && r01 == "2" && r10=="2" && r11=="2"){
-                XX = ((a11+a12)*(a21+a22)-gamma*exp(2)*theta*exp(2))/(gamma*(a21+a22+gamma*theta));
-                YY = ((a11+a12)*(a21+a22)-gamma*exp(2)*theta*exp(2))/(gamma*(a11+a12+gamma*theta));
+                XX = ((a11+a12)*(a21+a22)-pow(gamma, 2)*pow(theta, 2))/(gamma*(a21+a22+gamma*theta));
+                YY = ((a11+a12)*(a21+a22)-pow(gamma, 2)*pow(theta, 2))/(gamma*(a11+a12+gamma*theta));
             }
             break;
             
         case 'B':
             if(r00 == "0" && r01 == "0" && r10 == "0" && r11 == "0"){
-                XX = (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma);
-                YY = (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma);
+                XX = (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow((-a11-a12+a21+a22+gamma*theta),2)))/(2*gamma);
+                YY = (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow((-a11-a12+a21+a22+gamma*theta),2)))/(2*gamma);
             }
             
             
             if(r00 == "0" && r01 == "0" && r10 == "1" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a21+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*(a21+gamma*theta));
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a21+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a21+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*(a21+gamma*theta));
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a21+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
             }
             
             
             if(r00 == "0" && r01 == "0" && r10 == "2" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(2*a21+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(4*a21+2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(2*a21+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(2*a21+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(4*a21+2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(2*a21+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
             }
             
             
             if(r00 == "0" && r01 == "0" && r10 == "0" && r11 == "1"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a22+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*(a22+gamma*theta));
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a11+a12)*(a22+gamma*theta)+(-a11-a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a22+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*(a22+gamma*theta));
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a11+a12)*(a22+gamma*theta)+pow((-a11-a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
             }
             
             
@@ -1204,50 +1236,50 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "0" && r01 == "0" && r10 == "2" && r11 == "1"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(2*a21+a22+gamma*theta))))/(2*(2*a21+a22+gamma*theta));
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(2*a21+a22+gamma*theta))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(2*a21+a22+gamma*theta))))/(2*(2*a21+a22+gamma*theta));
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(2*a21+a22+gamma*theta))))/(2*gamma*theta);
             }
             
             
             if(r00 == "0" && r01 == "0" && r10 == "0" && r11 == "2"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(2*a22+gamma*theta))))/(4*a22+2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(2*a22+gamma*theta))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(2*a22+gamma*theta))))/(4*a22+2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(2*a22+gamma*theta))))/(2*gamma*theta);
             }
             
             
             if(r00 == "0" && r01 == "0" && r10 == "1" && r11 == "2"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(a21+2*a22+gamma*theta))))/(2*(a21+2*a22+gamma*theta));
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(a21+2*a22+gamma*theta))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(a21+2*a22+gamma*theta))))/(2*(a21+2*a22+gamma*theta));
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(a21+2*a22+gamma*theta))))/(2*gamma*theta);
             }
             
             
             if(r00 == "0" && r01 == "0" && r10 == "2" && r11 == "2"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(2*(a21+a22)+gamma*theta))))/(4*(a21+a22)+2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*((-a11-a12+a21+a22+gamma*theta)*exp(2)+4*(a11+a12)*(2*(a21+a22)+gamma*theta))))/(2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(2*(a21+a22)+gamma*theta))))/(4*(a21+a22)+2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(pow((-a11-a12+a21+a22+gamma*theta),2)+4*(a11+a12)*(2*(a21+a22)+gamma*theta))))/(2*gamma*theta);
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "0" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a11+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a11+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*(a11+gamma*theta));
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a11+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a11+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*(a11+gamma*theta));
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(2*a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(2*a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a22-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(a11*(a22-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(a11*(a22+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta),2)));
             }
             
             
@@ -1258,50 +1290,50 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "1" && r01 == "0" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(a21+2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(a21+2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(a21+2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(a21+2*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "1" && r01 == "0" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(2*a11*(a21+a22)+a11*gamma*theta-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*(a21+a22)+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+gamma*theta)))*(2*a11*(a21+a22)-a11*gamma*theta+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*(a21+a22)+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(2*a11*(a21+a22)+a11*gamma*theta-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*(a21+a22)+gamma*theta),2)));
+                YY = (1/(2*gamma*(a11+gamma*theta)))*(2*a11*(a21+a22)-a11*gamma*theta+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*(a21+a22)+gamma*theta),2)));
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "0" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(2*a11+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(2*a11+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(4*a11+2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*a11+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*a11+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(4*a11+2*gamma*theta);
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(a11*(2*a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(a11*(2*a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((a11*(2*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a11*(4*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(4*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(a11*(4*a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(a11*(4*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a11*(4*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((a11*(4*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(a11*(4*a21-gamma*theta)+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((a11*(4*a21+gamma*theta)-gamma*theta*(-a12+a21+a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a22+gamma*theta)),2)));
             }
             
             
@@ -1312,50 +1344,50 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "2" && r01 == "0" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(4*a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a21+2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(4*a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a21+2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(4*a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a21+2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(4*a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a21+2*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(4*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(4*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(4*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(4*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a21+4*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+4*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a21+4*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+4*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a12+a21+a22+gamma*theta)+a11*(2*a21+4*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+4*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(gamma*theta*(-a12+a21+a22-gamma*theta)+a11*(2*a21+4*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(2*a21+4*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "0" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*(a21+a22)+a11*gamma*theta-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*(a21+a22)+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(4*a11*(a21+a22)-a11*gamma*theta+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*(a21+a22)+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*(a21+a22)+a11*gamma*theta-gamma*theta*(-a12+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*(a21+a22)+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a11+gamma*theta)))*(4*a11*(a21+a22)-a11*gamma*theta+gamma*theta*(-a12+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a11*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a12+a21+a22+gamma*theta)-a11*(4*(a21+a22)+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "0" && r11 == "0"){
-                XX = (a11*theta-theta*(-a12+a21+a22+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+2*a11*(a12-a21-a22+gamma*theta)+(a12+a21+a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a12+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*(a12+gamma*theta));
+                XX = (a11*theta-theta*(-a12+a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+2*a11*(a12-a21-a22+gamma*theta)+pow((a12+a21+a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*(a12+gamma*theta));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(2*a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(2*a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a22-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(a12*(a22-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(a22+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             
             
@@ -1366,26 +1398,26 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "0" && r01 == "1" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(a21+2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(a21+2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(a21+2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow((gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(a21+2*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "0" && r01 == "1" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(2*a12*(a21+a22)+a12*gamma*theta-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*(a21+a22)+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a12+gamma*theta)))*(2*a12*(a21+a22)-a12*gamma*theta+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*(a21+a22)+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(2*a12*(a21+a22)+a12*gamma*theta-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*(a21+a22)+gamma*theta),2)));
+                YY = (1/(2*gamma*(a12+gamma*theta)))*(2*a12*(a21+a22)-a12*gamma*theta+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*(a21+a22)+gamma*theta),2)));
             }
             
             
@@ -1444,26 +1476,26 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "2" && r01 == "1" && r10 == "0" && r11 == "0"){
-                XX = (a11*theta-theta*(-a12+a21+a22+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+(a12+a21+a22+gamma*theta)*exp(2)+2*a11*(a12+3*(a21+a22)+gamma*theta))))/(2*gamma*theta);
-                YY = (-theta*(a11+a12-a21-a22+gamma*theta)+sqrt(theta*exp(2)*(a11*exp(2)+(a12+a21+a22+gamma*theta)*exp(2)+2*a11*(a12+3*(a21+a22)+gamma*theta))))/(2*(2*a11+a12+gamma*theta));
+                XX = (a11*theta-theta*(-a12+a21+a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+pow((a12+a21+a22+gamma*theta),2)+2*a11*(a12+3*(a21+a22)+gamma*theta))))/(2*gamma*theta);
+                YY = (-theta*(a11+a12-a21-a22+gamma*theta)+sqrt(pow(theta, 2)*(pow(a11,2)+pow((a12+a21+a22+gamma*theta),2)+2*a11*(a12+3*(a21+a22)+gamma*theta))))/(2*(2*a11+a12+gamma*theta));
             }
             
             
             if(r00 == "2" && r01 == "1" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(2*a11*a21+a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+((2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(2*a11*a21+a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+((2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(2*a11*a21+a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+pow(((2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(2*a11*a21+a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+pow(((2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "1" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(4*a11*a21+2*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+(2*(2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+(2*(2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(4*a11*a21+2*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+pow((2*(2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+pow((2*(2*a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "1" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(2*a11*a22+a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+((2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(2*a11*a22+a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+((2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(2*a11*a22+a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(2*a11*a22+a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2),2)));
             }
             
             
@@ -1474,50 +1506,50 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "2" && r01 == "1" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(4*a11*a21+2*a12*a21+2*a11*a22+a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a12*(2*a21+a22+gamma*theta)+a11*(4*a21+2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21+2*a11*a22+a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a12*(2*a21+a22+gamma*theta)+a11*(4*a21+2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(4*a11*a21+2*a12*a21+2*a11*a22+a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a12*(2*a21+a22+gamma*theta)+a11*(4*a21+2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21+2*a11*a22+a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a12*(2*a21+a22+gamma*theta)+a11*(4*a21+2*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "1" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+(2*(2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+(2*(2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*(2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*a11+a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*(2*a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "1" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(2*a11*a21+a12*a21+4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a12*(a21+2*a22+gamma*theta)+a11*(2*a21+4*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(2*a11*a21+a12*a21+4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a12*(a21+2*a22+gamma*theta)+a11*(2*a21+4*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(2*a11*a21+a12*a21+4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a12*(a21+2*a22+gamma*theta)+a11*(2*a21+4*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(2*a11*a21+a12*a21+4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a12*(a21+2*a22+gamma*theta)+a11*(2*a21+4*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "1" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*a21+2*a12*a21+4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+(4*a11*(a21+a22)+2*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21+4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+(4*a11*(a21+a22)+2*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*a21+2*a12*a21+4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow(4*a11*(a21+a22)+2*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21+4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow(4*a11*(a21+a22)+2*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta),2)));
             }
-            
+
             
             if(r00 == "0" && r01 == "2" && r10 == "0" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(2*a12+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(2*a12+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(4*a12+2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(4*a12+2*gamma*theta);
             }
             
             
             if(r00 == "0" && r01 == "2" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(a12*(2*a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(a12*(2*a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(2*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "2" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a12*(4*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(4*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(a12*(4*a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(a12*(4*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(a12*(4*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(4*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(a12*(4*a21-gamma*theta)+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(a12*(4*a21+gamma*theta)-gamma*theta*(-a11+a21+a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "2" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a22+gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a22-gamma*theta)+sqrt(4*gamma*theta*(a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a22+gamma*theta),2)));
             }
             
             
@@ -1528,50 +1560,50 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "0" && r01 == "2" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(4*a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a21+2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(4*a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a21+2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(4*a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a21+2*a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(4*a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a21+2*a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "2" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(4*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(4*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(4*a22+gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(4*a22-gamma*theta)+sqrt(4*gamma*theta*(2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "2" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a21+4*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+4*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a21+4*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+4*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(-gamma*theta*(-a11+a21+a22+gamma*theta)+a12*(2*a21+4*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+4*a22+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(gamma*theta*(-a11+a21+a22-gamma*theta)+a12*(2*a21+4*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(2*a21+4*a22+gamma*theta),2)));
             }
             
             
             if(r00 == "0" && r01 == "2" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a12*(a21+a22)+a12*gamma*theta-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*(a21+a22)+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(4*a12*(a21+a22)-a12*gamma*theta+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*(a21+a22)+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a12*(a21+a22)+a12*gamma*theta-gamma*theta*(-a11+a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*(a21+a22)+gamma*theta),2)));
+                YY = (1/(2*gamma*(2*a12+gamma*theta)))*(4*a12*(a21+a22)-a12*gamma*theta+gamma*theta*(-a11+a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*(2*a12*(a21+a22)+(a11+a12)*gamma*theta)+pow(gamma*theta*(-a11+a21+a22+gamma*theta)-a12*(4*(a21+a22)+gamma*theta),2)));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "0" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a11+2*a12+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(a11+2*a12+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*(a11+2*a12+gamma*theta));
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a11+2*a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(a11+2*a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*(a11+2*a12+gamma*theta));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+2*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+((a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(a11*a21+2*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+((a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(a11*a21+2*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+pow(((a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(a11*a21+2*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+pow(((a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(2*a11*a21+4*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+(2*(a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a11*a21+4*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+(2*(a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(2*a11*a21+4*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+pow((2*(a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a11*a21+4*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+pow((2*(a11+2*a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+((a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+((a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+pow(((a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+pow(((a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
@@ -1582,50 +1614,50 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "1" && r01 == "2" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(4*a12*a21+2*a12*a22+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(2*a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a11*(2*a21+a22+gamma*theta)+a12*(4*a21+2*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(4*a12*a21+2*a12*a22-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(2*a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a11*(2*a21+a22+gamma*theta)+a12*(4*a21+2*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(4*a12*a21+2*a12*a22+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(2*a21+a22+gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a11*(2*a21+a22+gamma*theta)+a12*(4*a21+2*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(4*a12*a21+2*a12*a22-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(2*a21+a22-gamma*theta)+sqrt(4*gamma*theta*(2*a21+a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a11*(2*a21+a22+gamma*theta)+a12*(4*a21+2*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(2*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+(2*(a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+(2*(a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(2*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*(a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(a11+2*a12+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*(a11+2*a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(2*a12*a21+4*a12*a22+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a11*(a21+2*a22+gamma*theta)+a12*(2*a21+4*a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a12*a21+4*a12*a22-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+a11*(a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+(-gamma*theta*(a21+a22+gamma*theta)+a11*(a21+2*a22+gamma*theta)+a12*(2*a21+4*a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(2*a12*a21+4*a12*a22+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(a21+2*a22+gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a11*(a21+2*a22+gamma*theta)+a12*(2*a21+4*a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a12*a21+4*a12*a22-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+a11*(a21+2*a22-gamma*theta)+sqrt(4*gamma*theta*(a21+2*a22+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((-gamma*theta*(a21+a22+gamma*theta)+a11*(a21+2*a22+gamma*theta)+a12*(2*a21+4*a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "1" && r01 == "2" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(2*a11*a21+4*a12*a21+2*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+(2*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a11*a21+4*a12*a21+2*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+(2*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(2*a11*a21+4*a12*a21+2*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((2*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(a11+2*a12+gamma*theta)))*(2*a11*a21+4*a12*a21+2*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((a11+2*a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow((2*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta)),2)));
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "0" && r11 == "0"){
-                XX = ((a11+a12-a21-a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(2*(a11+a12)+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(2*gamma*theta);
-                YY = ((-a11-a12+a21+a22)*theta-gamma*theta*exp(2)+sqrt(theta*exp(2)*(4*(a21+a22)*(2*(a11+a12)+gamma*theta)+(a11+a12-a21-a22+gamma*theta)*exp(2))))/(4*(a11+a12)+2*gamma*theta);
+                XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*(a11+a12)+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
+                YY = ((-a11-a12+a21+a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*(a11+a12)+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(4*(a11+a12)+2*gamma*theta);
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "1" && r11 == "0"){
-                XX = (1/(2*gamma*(a21+gamma*theta)))*(2*a11*a21+2*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+(2*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(2*a11*a21+2*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+(2*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a21+gamma*theta)))*(2*a11*a21+2*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+pow((2*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(2*a11*a21+2*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a21+(a21+a22)*gamma*theta)+pow((2*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "2" && r11 == "0"){
-                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(4*a11*a21+4*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+(4*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a21+4*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+(4*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+gamma*theta)))*(4*a11*a21+4*a12*a21+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+pow((4*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a21+4*a12*a21-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a21+(a21+a22)*gamma*theta)+pow((4*(a11+a12)*a21+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "0" && r11 == "1"){
-                XX = (1/(2*gamma*(a22+gamma*theta)))*(2*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+(2*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(2*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+(2*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a22+gamma*theta)))*(2*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(2*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*((a11+a12)*a22+(a21+a22)*gamma*theta)+pow((2*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
@@ -1636,31 +1668,35 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "2" && r01 == "2" && r10 == "2" && r11 == "1"){
-                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(4*a11*a21+4*a12*a21+2*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*gamma*theta*(2*a21+a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+(2*(a11+a12)*(2*a21+a22)+(a11+a12-a21-a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a21+4*a12*a21+2*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*gamma*theta*(2*a21+a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+(2*(a11+a12)*(2*a21+a22)+(a11+a12-a21-a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a21+a22+gamma*theta)))*(4*a11*a21+4*a12*a21+2*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*gamma*theta*(2*a21+a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+pow((2*(a11+a12)*(2*a21+a22)+(a11+a12-a21-a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a21+4*a12*a21+2*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*gamma*theta*(2*a21+a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+pow((2*(a11+a12)*(2*a21+a22)+(a11+a12-a21-a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "0" && r11 == "2"){
-                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(4*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+(4*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+(4*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(2*a22+gamma*theta)))*(4*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+pow((4*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a11+a12)+gamma*theta)*(2*(a11+a12)*a22+(a21+a22)*gamma*theta)+pow((4*(a11+a12)*a22+(-a11-a12+a21+a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "1" && r11 == "2"){
-                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(2*a11*a21+2*a12*a21+4*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*gamma*theta*(a21+2*a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+(2*(a11+a12)*(a21+2*a22)+(a11+a12-a21-a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(2*a11*a21+2*a12*a21+4*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*gamma*theta*(a21+2*a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+(2*(a11+a12)*(a21+2*a22)+(a11+a12-a21-a22)*gamma*theta-gamma*exp(2)*theta*exp(2))*exp(2)));
+                XX = (1/(2*gamma*(a21+2*a22+gamma*theta)))*(2*a11*a21+2*a12*a21+4*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*gamma*theta*(a21+2*a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+pow((2*(a11+a12)*(a21+2*a22)+(a11+a12-a21-a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(2*a11*a21+2*a12*a21+4*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*gamma*theta*(a21+2*a22+gamma*theta)*(2*(a21+a22)+gamma*theta)+pow((2*(a11+a12)*(a21+2*a22)+(a11+a12-a21-a22)*gamma*theta-pow(gamma, 2)*pow(theta, 2)),2)));
             }
             
             
             if(r00 == "2" && r01 == "2" && r10 == "2" && r11 == "2"){
-                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*a21+4*a12*a21+4*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*gamma*theta*(2*(a21+a22)+gamma*theta)*exp(2)+(4*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta))*exp(2)));
-                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a21+4*a12*a21+4*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-gamma*exp(2)*theta*exp(2)+sqrt(4*(a11+a12)*gamma*theta*(2*(a21+a22)+gamma*theta)*exp(2)+(4*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta))*exp(2)));
+                XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*a21+4*a12*a21+4*a11*a22+4*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*gamma*theta*pow((2*(a21+a22)+gamma*theta),2)+pow((4*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta)),2)));
+                YY = (1/(2*gamma*(2*(a11+a12)+gamma*theta)))*(4*a11*a21+4*a12*a21+4*a11*a22+4*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*(a11+a12)*gamma*theta*pow((2*(a21+a22)+gamma*theta),2)+pow((4*a11*(a21+a22)+4*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta)),2)));
                 
             }
             
             break;
     }
+    
+//    cout << "Troubleshooting: theta: "<<theta<<", gamma: "<<gamma<<" "<<r00<<r01<<r10<<r11<<" a11: "<<a11<<" a12: "<<a12<<" a21: "<<a21<<" a22: "<<a22<< " x: "<<XX<<" y: "<<YY<<endl;
+//    cout << (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma) << " " <<
+//    (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow(-a11-a12+a21+a22+gamma*theta,2)))/(2*gamma) << endl;
     
 }
 
@@ -2047,6 +2083,75 @@ double Populations::meanAbsoluteFitness(int flag)
     return avg;
 }
 
+void Populations::outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit)
+{
+    // If fitness_file.close(); == 0, print phenotypic data. If pheno0fitness1 == 1, print hybrid fitness data
+
+    if(parFit0_hybridFit1_all2==2)
+    {
+        ofstream phenotypes_file;
+        phenotypes_file.open ("ouput-phenotypes.txt", ofstream::out | ofstream::app);
+        for(int p=0; p<numPops; p++)
+        {
+            for(int i=0; i<(nSamples < numInd ? nSamples : numInd); i++)
+            {
+                phenotypes_file << p <<"\t" << generation << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+                gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+                opts[p].x_opt << "\t" << opts[p].y_opt <<  "\t" <<  opts[p].om11 << "\t" << opts[p].om12 << "\t" <<
+                pop[p][i][0][0].regulatory << pop[p][i][0][1].regulatory << pop[p][i][1][0].regulatory << pop[p][i][0][1].regulatory << "\t" <<
+                pop[p][i][0][0].coding <<"\t"<< pop[p][i][0][1].coding <<"\t"<< pop[p][i][1][0].coding <<"\t"<< pop[p][i][0][1].coding << "\t" <<
+                xys[p][i].xx << "\t"  << xys[p][i].yy << "\t" << xys[p][i].ww << "\n";
+                
+            }
+        }
+        phenotypes_file.close();
+        
+    }
+    if(parFit0_hybridFit1_all2==0 || parFit0_hybridFit1_all2==1)
+    {
+        ofstream fitness_file;
+        fitness_file.open ("output-fitness.txt", ofstream::out | ofstream::app);
+        int p=0;
+     
+            fitness_file << p <<"\t" << generation << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+            opts[p].x_opt << "\t" << opts[p].y_opt <<  "\t" <<  opts[p].om11 << "\t" << opts[p].om12 << "\t" << parFit0_hybridFit1_all2 << "\t" <<
+            meanAbsFit << "\n";
+       
+        fitness_file.close();
+    }
+    
+    
+    
+    
+    
+
+}
+
+
+
+//
+//int numPops(0);
+//int numInds(1);
+//double mu(0.01);
+//double reg_mu(0.001);
+//double mu_var(0.01);             // Allow user to define this
+//double x1(100);
+//double x2(100);
+//char* reg_pattern = nullptr;
+//double theta(300);
+//double gamma(1);
+//char *mod = nullptr;
+//int num_generations(1);
+//double allelic_Stdev(1);
+//double XOPT(300);                // Trait 1 optimum
+//double YOPT(300);                // Trait 2 optimum
+//double OM11(10000);                // Variance in stabilizing selection (for all pops)
+//double OM12(0);
+//double rec(0.5);                  // This is the recombination rate between coding loci
+//double m_rate(0.0);
+//
+//int selection_mode(1);       // Advanced: 1 = "soft selection", any other integer = hard
 
 
 
@@ -2486,6 +2591,7 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
             if(reg_pattern=="1022"){
                 a1=(2*gamma*x*(theta+y))/(2*theta+y);
                 a2=(gamma*(theta+x)*y)/(theta+2*x);
+               
             }
             if(reg_pattern=="2000"){
                 a1=gamma*x;
@@ -2594,6 +2700,8 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
             if(reg_pattern=="1122"){
                 a1=gamma*x;
                 a2=(gamma*(theta+x)*y)/(theta+2*x);
+//                 cout << "The starting motif is 1122 for model B" << endl;
+                cout << "This is alpha 1: " << a1 << " and this is alpha 2: " << a2 << endl;
             }
             if(reg_pattern=="2100"){
                 a1=(2*gamma*x*(theta+y))/(2*theta+3*y);
@@ -2739,12 +2847,12 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
                 a1=(gamma*x*(theta+y))/(theta+2*y);
                 a2=(gamma*(theta+x)*y)/(theta+2*x);
             }
-            
+//            cout << "Reg pattern: " << reg_pattern << " This is alpha 1: " << a1 << " and this is alpha 2: " << a2 << endl;
             break;
     }
     
     
-//    cout << "reg = " << reg_pattern << " x = " << x << " y = " << y << " theta = " << theta << " gamma= " << gamma << " model= " << mod << " a1= " << a1 << " a2= " << a2 << endl;
+    cout << "reg = " << reg_pattern << " x = " << x << " y = " << y << " theta = " << theta << " gamma= " << gamma << " model= " << mod << " a1= " << a1 << " a2= " << a2 << endl;
 //    x = 20.3;
 }
 
