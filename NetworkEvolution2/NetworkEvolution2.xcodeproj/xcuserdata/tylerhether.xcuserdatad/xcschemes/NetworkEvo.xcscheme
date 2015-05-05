@@ -145,7 +145,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_freq 10"
+            argument = "-output_freq 5"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

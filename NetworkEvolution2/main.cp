@@ -126,8 +126,8 @@ public:
     // Print population to screen (for debugging)
     void printPop(int flag); // flag==1 then print only the last flag individuals
     
-    // For output
-    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
+//    // For output
+//    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
 };
 
 // Forward Declarations of Functions:       // Can be moved to a header file if gets too long.
@@ -157,8 +157,11 @@ int main(int argc, char *argv[])
 //    // For outputing data to file:
 //    ofstream phenotypes_file;
 //    phenotypes_file.open ("ouput-phenotypes.txt");
-    
+    ofstream phenotypes_file;
+    phenotypes_file.open ("ouput-phenotypes.txt", ofstream::out | ofstream::app);
 
+    ofstream fitness_file;
+    fitness_file.open ("output-fitness.txt", ofstream::out | ofstream::app);
     
     
     
@@ -190,7 +193,7 @@ int main(int argc, char *argv[])
     int selection_mode(1);       // Advanced: 1 = "soft selection", any other integer = hard
     
     
-    double meanAbsFit(0);
+//    double meanAbsFit(0);
     int outputFreq(100);          // frequency of output
     
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
@@ -470,6 +473,10 @@ int main(int argc, char *argv[])
     
     Pop.printPop(5);
 
+    
+    
+    int nSamples(200); // Only output the first nSamples of individuals
+    
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
         
@@ -489,9 +496,37 @@ int main(int argc, char *argv[])
         
         if(g % outputFreq == 0)
         {
-            meanAbsFit = Pop.meanAbsoluteFitness(0);
-            Pop.outputData(200, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 2, meanAbsFit);
-            Pop.outputData(numInds, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 0, meanAbsFit);
+            
+            // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
+            for(int p=0; p<numPops; p++)
+            {
+                for(int i=0; i<(nSamples < numInds ? nSamples : numInds); i++)
+                {
+                    phenotypes_file << p <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+                    gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+                    Pop.opts[p].x_opt << "\t" << Pop.opts[p].y_opt <<  "\t" <<  Pop.opts[p].om11 << "\t" << Pop.opts[p].om12 << "\t" <<
+                    Pop.pop[p][i][0][0].regulatory << Pop.pop[p][i][0][1].regulatory << Pop.pop[p][i][1][0].regulatory << Pop.pop[p][i][0][1].regulatory << "r\t" <<
+                    Pop.pop[p][i][0][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding <<"\t"<< Pop.pop[p][i][1][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding << "\t" <<
+                    Pop.xys[p][i].xx << "\t"  << Pop.xys[p][i].yy << "\t" << Pop.xys[p][i].ww << "\n";
+                    
+                }
+            }
+           
+            
+//            Pop.outputData(200, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 2);
+            
+            
+            
+            fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+            Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 0 << "\t" <<
+            Pop.meanAbsoluteFitness(0) << "\n";
+            
+            
+            
+           
+            
+//            Pop.outputData(numInds, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 0, meanAbsFit);
 //            cout << " | XP mean AbsW = " << meanAbsFit << "\t";
         }
         
@@ -512,8 +547,12 @@ int main(int argc, char *argv[])
             
             // 3 - calculate their absolute fitness
             Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
-            meanAbsFit = Pop.meanAbsoluteFitness(1);
-            Pop.outputData(numInds, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 1, meanAbsFit);
+            
+            // 4 - Ouput hybrid data
+            fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+            Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 1 << "\t" << // the 1 indicates hybrids
+            Pop.meanAbsoluteFitness(1) << "\n";
 //            cout << " | Hybrid mean AbsW = " << meanAbsFit << "\n";
         }
         
@@ -543,8 +582,8 @@ int main(int argc, char *argv[])
     delete[] mMigrantArray;
     
     // Close output files
-    
-    
+    phenotypes_file.close();
+    fitness_file.close();
 
     
     
@@ -2083,75 +2122,12 @@ double Populations::meanAbsoluteFitness(int flag)
     return avg;
 }
 
-void Populations::outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit)
-{
-    // If fitness_file.close(); == 0, print phenotypic data. If pheno0fitness1 == 1, print hybrid fitness data
-
-    if(parFit0_hybridFit1_all2==2)
-    {
-        ofstream phenotypes_file;
-        phenotypes_file.open ("ouput-phenotypes.txt", ofstream::out | ofstream::app);
-        for(int p=0; p<numPops; p++)
-        {
-            for(int i=0; i<(nSamples < numInd ? nSamples : numInd); i++)
-            {
-                phenotypes_file << p <<"\t" << generation << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
-                gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
-                opts[p].x_opt << "\t" << opts[p].y_opt <<  "\t" <<  opts[p].om11 << "\t" << opts[p].om12 << "\t" <<
-                pop[p][i][0][0].regulatory << pop[p][i][0][1].regulatory << pop[p][i][1][0].regulatory << pop[p][i][0][1].regulatory << "\t" <<
-                pop[p][i][0][0].coding <<"\t"<< pop[p][i][0][1].coding <<"\t"<< pop[p][i][1][0].coding <<"\t"<< pop[p][i][0][1].coding << "\t" <<
-                xys[p][i].xx << "\t"  << xys[p][i].yy << "\t" << xys[p][i].ww << "\n";
-                
-            }
-        }
-        phenotypes_file.close();
-        
-    }
-    if(parFit0_hybridFit1_all2==0 || parFit0_hybridFit1_all2==1)
-    {
-        ofstream fitness_file;
-        fitness_file.open ("output-fitness.txt", ofstream::out | ofstream::app);
-        int p=0;
-     
-            fitness_file << p <<"\t" << generation << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
-            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
-            opts[p].x_opt << "\t" << opts[p].y_opt <<  "\t" <<  opts[p].om11 << "\t" << opts[p].om12 << "\t" << parFit0_hybridFit1_all2 << "\t" <<
-            meanAbsFit << "\n";
-       
-        fitness_file.close();
-    }
-    
-    
-    
-    
-    
-
-}
-
-
-
+//void Populations::outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit)
+//{
 //
-//int numPops(0);
-//int numInds(1);
-//double mu(0.01);
-//double reg_mu(0.001);
-//double mu_var(0.01);             // Allow user to define this
-//double x1(100);
-//double x2(100);
-//char* reg_pattern = nullptr;
-//double theta(300);
-//double gamma(1);
-//char *mod = nullptr;
-//int num_generations(1);
-//double allelic_Stdev(1);
-//double XOPT(300);                // Trait 1 optimum
-//double YOPT(300);                // Trait 2 optimum
-//double OM11(10000);                // Variance in stabilizing selection (for all pops)
-//double OM12(0);
-//double rec(0.5);                  // This is the recombination rate between coding loci
-//double m_rate(0.0);
+//    
 //
-//int selection_mode(1);       // Advanced: 1 = "soft selection", any other integer = hard
+//}
 
 
 
