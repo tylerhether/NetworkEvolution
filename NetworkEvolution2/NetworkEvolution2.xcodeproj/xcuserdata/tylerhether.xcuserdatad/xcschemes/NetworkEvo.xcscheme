@@ -73,7 +73,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 10000"
+            argument = "-gen 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -109,7 +109,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_network 1111"
+            argument = "-start_network 1111r"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -137,7 +137,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_deviation 2.0"
+            argument = "-start_deviation 0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -145,7 +145,19 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_freq 5"
+            argument = "-output_freq 100"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-output_pheno_file phenotypes2.txt"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-output_fitness_file fitness2.txt"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-rep 1"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

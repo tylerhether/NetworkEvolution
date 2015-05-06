@@ -157,15 +157,9 @@ int main(int argc, char *argv[])
 //    // For outputing data to file:
 //    ofstream phenotypes_file;
 //    phenotypes_file.open ("ouput-phenotypes.txt");
-    ofstream phenotypes_file;
-    phenotypes_file.open ("ouput-phenotypes.txt", ofstream::out | ofstream::app);
 
+    ofstream phenotypes_file;
     ofstream fitness_file;
-    fitness_file.open ("output-fitness.txt", ofstream::out | ofstream::app);
-    
-    
-    
-    
     
     // Seed random numbers
     srand((unsigned int)time(NULL));
@@ -177,7 +171,9 @@ int main(int argc, char *argv[])
     double mu_var(0.01);             // Allow user to define this
     double x1(100);
     double x2(100);
-    char* reg_pattern = nullptr;
+    string reg_pattern;
+//    char* reg_pattern = nullptr;
+//    string PHENO_OUT = nullptr; //output_pheno_file
     double theta(300);
     double gamma(1);
     char *mod = nullptr;
@@ -189,8 +185,11 @@ int main(int argc, char *argv[])
     double OM12(0);
     double rec(0.5);                  // This is the recombination rate between coding loci
     double m_rate(0.0);
-
+    int rep(1);                 // Replicate number
     int selection_mode(1);       // Advanced: 1 = "soft selection", any other integer = hard
+    
+    int pheno_flag = 0;         // flags for default behavior of output names
+    int fitness_flag = 0;       // flags for default behavior of output names
     
     
 //    double meanAbsFit(0);
@@ -236,6 +235,7 @@ int main(int argc, char *argv[])
         }
         if(string(argv[i]) == "-start_network"){
             reg_pattern = argv[i+1];
+            reg_pattern = reg_pattern.substr (0,4); // For high throughput through bash, 0000 is simplified as 0 so adding a alpha character forces it to be a string. but we only want the first 4 chars.
             cout << "\tInitial network architecture = " << reg_pattern << endl;
         }
         if(string(argv[i]) == "-theta"){
@@ -293,12 +293,47 @@ int main(int argc, char *argv[])
             cout << "\tData will be written every " << outputFreq << " generations" << endl;
             if(outputFreq<50)
             {
-                cout << "\tWarning: output frequency is really low. Simulations will be slower.\n";
+                cout << "\tWarning: output frequency is really low. Simulations will be slower and output files may be large as a result.\n";
             }
         }
-        
+        if(string(argv[i]) == "-output_pheno_file")
+        {
+            string PHENO_OUT = argv[i+1];
+            pheno_flag = 1;
+            cout << "\tThe phenotypic output file is named: " << PHENO_OUT << endl;
+            
+            phenotypes_file.open (string(argv[i+1]), ofstream::out | ofstream::app);
+        }
+        if(string(argv[i]) == "-output_fitness_file")
+        {
+            string FITNESS_OUT = argv[i+1];
+            fitness_flag = 1;
+            cout << "\tThe fitness output file is named: " << FITNESS_OUT << endl;
+            
+            fitness_file.open (string(argv[i+1]), ofstream::out | ofstream::app);
+        }
+        if(string(argv[i]) == "-rep"){
+            rep = atoi(argv[i+1]);
+            cout << "\tReplicate number = " << rep << endl;
+        }
         
     }
+    if(pheno_flag==0)
+    {
+        phenotypes_file.open ("ouput-phenotypes.txt", ofstream::out | ofstream::app);
+        
+    }
+    if(fitness_flag==0)
+    {
+        fitness_file.open ("output-fitness.txt", ofstream::out | ofstream::app);
+    }
+
+    
+
+ 
+    
+    
+    
     
     /*
     BEGIN GENERATING RANDOM ARRAYS
@@ -483,11 +518,11 @@ int main(int argc, char *argv[])
         
         
         // Print Progress every 250 generations
-        if(g % 250 == 0)
-        {
-            cout << "Generation " << g << "\n";
-        }
-        
+//        if(g % 250 == 0)
+//        {
+//            cout << "Generation " << g << "\n";
+//        }
+//        
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod, 0);
         
@@ -504,7 +539,7 @@ int main(int argc, char *argv[])
                 {
                     phenotypes_file << p <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
                     gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
-                    Pop.opts[p].x_opt << "\t" << Pop.opts[p].y_opt <<  "\t" <<  Pop.opts[p].om11 << "\t" << Pop.opts[p].om12 << "\t" <<
+                    Pop.opts[p].x_opt << "\t" << Pop.opts[p].y_opt <<  "\t" <<  Pop.opts[p].om11 << "\t" << Pop.opts[p].om12 << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
                     Pop.pop[p][i][0][0].regulatory << Pop.pop[p][i][0][1].regulatory << Pop.pop[p][i][1][0].regulatory << Pop.pop[p][i][0][1].regulatory << "r\t" <<
                     Pop.pop[p][i][0][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding <<"\t"<< Pop.pop[p][i][1][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding << "\t" <<
                     Pop.xys[p][i].xx << "\t"  << Pop.xys[p][i].yy << "\t" << Pop.xys[p][i].ww << "\n";
@@ -518,7 +553,7 @@ int main(int argc, char *argv[])
             
             
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
-            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 0 << "\t" <<
             Pop.meanAbsoluteFitness(0) << "\n";
             
@@ -550,7 +585,7 @@ int main(int argc, char *argv[])
             
             // 4 - Ouput hybrid data
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
-            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+            gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 1 << "\t" << // the 1 indicates hybrids
             Pop.meanAbsoluteFitness(1) << "\n";
 //            cout << " | Hybrid mean AbsW = " << meanAbsFit << "\n";
@@ -569,7 +604,7 @@ int main(int argc, char *argv[])
     
     Pop.getPheno(theta, gamma, *mod, 0);
     Pop.getFitness(0);
-    Pop.printPop(10);
+//    Pop.printPop(10);
     
     // Estimate the fitness of the hybrids:
     Pop.printHybrids(100);

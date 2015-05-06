@@ -1,0 +1,10 @@
+#!/bin/sh
+#PBS -N NETWORK_EVO
+#PBS -q reg
+
+. /usr/modules/init/bash
+module load grc
+module load R
+cd $PBS_O_WORKDIR
+
+../Simulation6.R --no-save --args --m=$M --mu=$MU --regmu=$REGMU --om11=$OM11 --om12=$OM12 --N=$N --optimum=$OPTIMUM --switchfreq=$SWITCHFREQ --motif=$MOTIF --rep=$REP --rotdeg=$ROTDEG 
