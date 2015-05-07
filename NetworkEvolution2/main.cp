@@ -506,9 +506,8 @@ int main(int argc, char *argv[])
     }
 
     
-    Pop.printPop(5);
-
-    
+    //cout << "This is the population at the beginning " << endl;
+    //Pop.printPop(10);
     
     int nSamples(200); // Only output the first nSamples of individuals
     
@@ -516,22 +515,31 @@ int main(int argc, char *argv[])
     for(int g=1; g<(1+num_generations); g++){
         
         
+      
+        if(g % 250 == 0)
+        {
+            cout << "Generation " << g << "\n";
+        }
         
-        // Print Progress every 250 generations
-//        if(g % 250 == 0)
-//        {
-//            cout << "Generation " << g << "\n";
-//        }
-//        
+        //cout << "This is the population before updating phenotypes for generation " << g << endl;
+        //Pop.printPop(10);
+
+        
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod, 0);
-        
+
+        //cout << "This is the population after updating phenotypes, before updating fitness for generation " << g << endl;
+        //Pop.printPop(10);
+
         // Calculate Fitness:
         Pop.getFitness(0);
-        
+
+        //cout << "This is the population after updating fitness for generation " << g << endl;
+        //Pop.printPop(10);
+
         if(g % outputFreq == 0)
         {
-            
+
             // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
             for(int p=0; p<numPops; p++)
             {
@@ -540,16 +548,13 @@ int main(int argc, char *argv[])
                     phenotypes_file << p <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
                     gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
                     Pop.opts[p].x_opt << "\t" << Pop.opts[p].y_opt <<  "\t" <<  Pop.opts[p].om11 << "\t" << Pop.opts[p].om12 << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
-                    Pop.pop[p][i][0][0].regulatory << Pop.pop[p][i][0][1].regulatory << Pop.pop[p][i][1][0].regulatory << Pop.pop[p][i][0][1].regulatory << "r\t" <<
-                    Pop.pop[p][i][0][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding <<"\t"<< Pop.pop[p][i][1][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding << "\t" <<
+                    Pop.pop[p][i][0][0].regulatory << "\t" << Pop.pop[p][i][0][1].regulatory << "\t" << Pop.pop[p][i][1][0].regulatory << "\t" << Pop.pop[p][i][1][1].regulatory << "\t" <<
+                    Pop.pop[p][i][0][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding <<"\t"<< Pop.pop[p][i][1][0].coding <<"\t"<< Pop.pop[p][i][1][1].coding << "\t" <<
                     Pop.xys[p][i].xx << "\t"  << Pop.xys[p][i].yy << "\t" << Pop.xys[p][i].ww << "\n";
                     
                 }
             }
            
-            
-//            Pop.outputData(200, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 2);
-            
             
             
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
@@ -557,19 +562,17 @@ int main(int argc, char *argv[])
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 0 << "\t" <<
             Pop.meanAbsoluteFitness(0) << "\n";
             
-            
-            
-           
-            
-//            Pop.outputData(numInds, g, mu, reg_mu, mu_var, reg_pattern, theta, gamma, mod, allelic_Stdev, rec, m_rate, selection_mode, 0, meanAbsFit);
-//            cout << " | XP mean AbsW = " << meanAbsFit << "\t";
-        }
+       }
         
         if(selection_mode==1)
         {
             Pop.getRelativeFitness();
             
         }
+  
+        //cout << "This is the population after converting to relative fitness for generation  " << g << endl;
+        //Pop.printPop(10);
+
         
         if(g % outputFreq == 0)
         {
@@ -607,7 +610,7 @@ int main(int argc, char *argv[])
 //    Pop.printPop(10);
     
     // Estimate the fitness of the hybrids:
-    Pop.printHybrids(100);
+//    Pop.printHybrids(100);
     
     // Cleaning dynamically allocated memory
     delete[] mRecombinationArray;
@@ -913,6 +916,20 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
                               mod,
                               xys[p][i].xx,
                               xys[p][i].yy);
+                //Testing
+//                geno_to_pheno(150.312,
+//                              151.526,
+//                              144.518,
+//                              151.526,
+//                              "1","1","1","1",
+//                              theta,
+//                              gamma,
+//                              mod,
+//                              xys[p][i].xx,
+//                              xys[p][i].yy);
+   
+                
+                
                 
             }
             

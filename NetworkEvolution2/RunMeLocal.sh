@@ -55,6 +55,14 @@ done < $INPUT_FILE
 
 # rm .RData
 # rm *Rout
+cd ../
+sleep 5
+
+for file in $(ls 00-SummaryOutput/fit*); do cat $file >> fitnessAll.txt; done
+rm 00-SummaryOutput/fit*
+
+
+
 
 
 # R --no-save --args  --mu=0.02 --regmu=0 --om11=1000_1000 --om12=-0.2_-0.2 --N=100 --optimum=400_400_400_400 --switchfreq=10000 --motif=2222 --rep=1 
