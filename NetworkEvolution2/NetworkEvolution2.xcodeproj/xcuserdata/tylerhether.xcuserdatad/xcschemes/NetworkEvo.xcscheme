@@ -73,7 +73,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 100"
+            argument = "-gen 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -81,7 +81,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu_var 14.14"
+            argument = "-mu_var 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -125,7 +125,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-theta 300"
+            argument = "-theta 50"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

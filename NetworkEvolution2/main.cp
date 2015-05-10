@@ -2170,8 +2170,15 @@ double Populations::meanAbsoluteFitness(int flag)
         }
         avg = sum/static_cast<double>(numInd);
     }
-    
+    if(isinf(sum))
+    {
+        cout << "Warning, problem with averaging fitness values +/- inf detected. returning -1" << endl;
+        return 0.0;
+    } else
+    {
     return avg;
+    }
+
 }
 
 //void Populations::outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit)
