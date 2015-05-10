@@ -69,23 +69,23 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 10"
+            argument = "-i 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 2"
+            argument = "-gen 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu 0"
+            argument = "-mu 0.02"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu_var 0.1"
+            argument = "-mu_var 14.14"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-reg_mu 0.9"
+            argument = "-reg_mu 0.002"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -101,11 +101,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_opt 300"
+            argument = "-x_opt 500"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_opt 300"
+            argument = "-y_opt 500"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -113,7 +113,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-sel_var 10000000"
+            argument = "-sel_var 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -125,7 +125,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-theta 300.0"
+            argument = "-theta 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -137,7 +137,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_deviation 0"
+            argument = "-start_deviation 20"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -145,7 +145,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_freq 2"
+            argument = "-output_freq 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

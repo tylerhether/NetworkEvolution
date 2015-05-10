@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
     
     random_device rd;                          // this defines the dist for the mutational effects
     mt19937 e222(rd());                        // if a mutation happened
-    normal_distribution<double> dist2(1, mu_var);
+    normal_distribution<double> dist2(0, mu_var);
     
   
     for (int i=0; i<nrolls; i++){
@@ -410,10 +410,10 @@ int main(int argc, char *argv[])
         if (distributionMU(generator2)){
             
             mMutateCodingArray[i]= dist2(e222);
-             //  cout << mMutateCodingArray[i] << " " << endl;
+//               cout << mMutateCodingArray[i] << " " << "\t";
         } else {
-            mMutateCodingArray[i]= 1;
-             //  cout << mMutateCodingArray[i] << endl;
+            mMutateCodingArray[i]= 0;
+//               cout << mMutateCodingArray[i] << "\t";
         }
     }
     
@@ -550,7 +550,7 @@ int main(int argc, char *argv[])
                     Pop.opts[p].x_opt << "\t" << Pop.opts[p].y_opt <<  "\t" <<  Pop.opts[p].om11 << "\t" << Pop.opts[p].om12 << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
                     Pop.pop[p][i][0][0].regulatory << "\t" << Pop.pop[p][i][0][1].regulatory << "\t" << Pop.pop[p][i][1][0].regulatory << "\t" << Pop.pop[p][i][1][1].regulatory << "\t" <<
                     Pop.pop[p][i][0][0].coding <<"\t"<< Pop.pop[p][i][0][1].coding <<"\t"<< Pop.pop[p][i][1][0].coding <<"\t"<< Pop.pop[p][i][1][1].coding << "\t" <<
-                    Pop.xys[p][i].xx << "\t"  << Pop.xys[p][i].yy << "\t" << Pop.xys[p][i].ww << "\n";
+                    Pop.xys[p][i].xx << "\t"  << Pop.xys[p][i].yy << "\t" << Pop.xys[p][i].ww << endl;
                     
                 }
             }
@@ -560,7 +560,7 @@ int main(int argc, char *argv[])
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
             gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 0 << "\t" <<
-            Pop.meanAbsoluteFitness(0) << "\n";
+            Pop.meanAbsoluteFitness(0) << endl;
             
        }
         
@@ -590,7 +590,7 @@ int main(int argc, char *argv[])
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
             gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 1 << "\t" << // the 1 indicates hybrids
-            Pop.meanAbsoluteFitness(1) << "\n";
+            Pop.meanAbsoluteFitness(1) << endl;
 //            cout << " | Hybrid mean AbsW = " << meanAbsFit << "\n";
         }
         
@@ -1955,23 +1955,23 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
             int parent2(pick_pairs(gen2));
             
             //cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
-            pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)*(mutate_code_array[index]);
+            pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)+(mutate_code_array[index]);
             pop[p][i][0][0].regulatory = pop_after_selection[p][parent1][0][recomb_array[index]].regulatory;
             reg_mu(mutate_reg_array[index], pop[p][i][0][0].regulatory); // This function mutates the regulatory region
 
             
             //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop_after_selection[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
-            pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding*(mutate_code_array[index+1]);
+            pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index+1]);
             pop[p][i][1][0].regulatory = pop_after_selection[p][parent1][1][recomb_array[index+1]].regulatory;
             reg_mu(mutate_reg_array[index+1],pop[p][i][1][0].regulatory); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop_after_selection[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
-            pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding*(mutate_code_array[index+2]);
+            pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index+2]);
             pop[p][i][0][1].regulatory = pop_after_selection[p][parent2][0][recomb_array[index+2]].regulatory;
             reg_mu(mutate_reg_array[index+2],pop[p][i][0][1].regulatory); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop_after_selection[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
-            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+3]].coding*(mutate_code_array[index+3]);
+            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index+3]);
             pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+3]].regulatory;
             reg_mu(mutate_reg_array[index+3],pop[p][i][1][1].regulatory); // This function mutates the regulatory region
             
