@@ -69,11 +69,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 10000"
+            argument = "-i 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 1000"
+            argument = "-gen 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -81,7 +81,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu_var 100"
+            argument = "-mu_var 50"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -89,7 +89,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-m_rate 0.0"
+            argument = "-m_rate 0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -109,7 +109,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_network 1111"
+            argument = "-start_network 0000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -125,7 +125,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-theta 50"
+            argument = "-theta 300"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -137,7 +137,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_deviation 20"
+            argument = "-start_deviation 2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
