@@ -73,7 +73,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 100"
+            argument = "-gen 10000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -145,7 +145,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_freq 100"
+            argument = "-output_freq 10"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
