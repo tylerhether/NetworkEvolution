@@ -2182,14 +2182,9 @@ double Populations::meanAbsoluteFitness(int flag)
         }
         avg = sum/static_cast<double>(numInd);
     }
-    if(isinf(sum))
-    {
-        cout << "Warning, problem with averaging fitness values +/- inf detected. returning -1" << endl;
-        return 0.0;
-    } else
-    {
+   
     return avg;
-    }
+    
 
 }
 

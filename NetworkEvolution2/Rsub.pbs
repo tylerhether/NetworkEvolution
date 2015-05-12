@@ -1,10 +1,14 @@
 #!/bin/sh
 #PBS -N NETWORK_EVO
-#PBS -q reg
+#PBS -q tiny
 
 . /usr/modules/init/bash
-module load grc
-module load R
 cd $PBS_O_WORKDIR
+module load grc
 
-../Simulation6.R --no-save --args --m=$M --mu=$MU --regmu=$REGMU --om11=$OM11 --om12=$OM12 --N=$N --optimum=$OPTIMUM --switchfreq=$SWITCHFREQ --motif=$MOTIF --rep=$REP --rotdeg=$ROTDEG 
+module load gcc/4.7.4
+which gcc
+
+# echo "./simulation -npops "$npops" -i "$nind" -gen "$gen" -mu "$mu" -mu_var "$mu_var" -reg_mu "$reg_mu" -m_rate "$m_rate" -x_start "$x_start" -y_start "$y_start" -x_opt "$x_opt" -y_opt "$y_opt" -start_network "$start_network" -sel_var "$sel_var" -sel_covar "$sel_covar" -rec "$rec" -theta "$theta" -gamma "$gamma" -model "$model" -start_deviation "$start_deviation" -selection_mode "$selection_mode" -output_freq "$output_freq" -output_pheno_file "$output_pheno_file" -output_fitness_file "$output_fitness_file" -rep "$rep 
+
+./simulation -npops $npops -i $nind -gen $gen -mu $mu -mu_var $mu_var -reg_mu $reg_mu -m_rate $m_rate -x_start $x_start -y_start $y_start -x_opt $x_opt -y_opt $y_opt -start_network $start_network -sel_var $sel_var -sel_covar $sel_covar -rec $rec -theta $theta -gamma $gamma -model $model -start_deviation $start_deviation -selection_mode $selection_mode -output_freq $output_freq -output_pheno_file $output_pheno_file -output_fitness_file $output_fitness_file -rep $rep
