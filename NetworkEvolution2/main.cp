@@ -26,7 +26,7 @@
 using namespace std; // This let's you use the shorthand the std library's functions
 //using namespace arma;
 
-
+// This was the minor comment for the minor commit :)
 //Clasess and Strcutures
 struct locus                                    // Initialize the locus structure
 {
