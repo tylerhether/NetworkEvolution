@@ -510,7 +510,7 @@ int main(int argc, char *argv[])
     //cout << "This is the population at the beginning " << endl;
 //    Pop.printPop(10);
     
-    int nSamples(200); // Only output the first nSamples of individuals
+    int nSamples(1000); // Only output the first nSamples of individuals
 
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
@@ -566,7 +566,8 @@ int main(int argc, char *argv[])
             
        }
        
-   
+        // This overwrites the fitness values so it is important that the block below comes
+        // after writing the meanAboluteFitness(0) value!
         if(selection_mode==1)
         {
             Pop.getRelativeFitness();
@@ -596,6 +597,22 @@ int main(int argc, char *argv[])
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 1 << "\t" << // the 1 indicates hybrids
             Pop.meanAbsoluteFitness(1) << endl;
 
+            // Print the hybrid phenotypes to file
+            // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
+                for(int i=0; i<(nSamples < numInds ? nSamples : numInds); i++)
+                {
+                    int p(0);
+                    phenotypes_file << -1 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+                    gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+                    Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
+                    Pop.hybrid_pool[p][i][0][0].regulatory << "\t" << Pop.hybrid_pool[p][i][0][1].regulatory << "\t" << Pop.hybrid_pool[p][i][1][0].regulatory << "\t" << Pop.pop[p][i][1][1].regulatory << "\t" <<
+                    Pop.hybrid_pool[p][i][0][0].coding <<"\t"<< Pop.hybrid_pool[p][i][0][1].coding <<"\t"<< Pop.hybrid_pool[p][i][1][0].coding <<"\t"<< Pop.hybrid_pool[p][i][1][1].coding << "\t" <<
+                    Pop.xyw_hybrids[p][i].xx << "\t"  << Pop.xyw_hybrids[p][i].yy << "\t" << Pop.xyw_hybrids[p][i].ww << endl;
+                    
+                }
+            
+            
+            
         }
   
         // Viability Selection:
