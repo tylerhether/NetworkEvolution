@@ -510,14 +510,14 @@ int main(int argc, char *argv[])
     //cout << "This is the population at the beginning " << endl;
 //    Pop.printPop(10);
     
-    int nSamples(1000); // Only output the first nSamples of individuals
+    int nSamples(500); // Only output the first nSamples of individuals
 
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
         
         
       
-        if(g % 250 == 0)
+        if(g % 250 == 0 | g == 1)
         {
             cout << "Generation " << g << "\n";
         }
@@ -539,7 +539,7 @@ int main(int argc, char *argv[])
 //        Pop.printPop(10);
         // For debugging / performance estimates
  
-        if(g % outputFreq == 0)
+        if(g % outputFreq == 0 | g == 1)
         {
 
             // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
@@ -578,7 +578,7 @@ int main(int argc, char *argv[])
 //        Pop.printPop(10);
 
         
-        if(g % outputFreq == 0)
+        if(g % outputFreq == 0 | g == 1)
         {
             // ESTIMATING HYBRID FITNESS
             // 1 - Make hybrids
