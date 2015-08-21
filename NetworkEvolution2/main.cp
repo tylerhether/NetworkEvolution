@@ -125,6 +125,8 @@ public:
     // Print population to screen (for debugging)
     void printPop(int flag); // flag==1 then print only the last flag individuals
     
+        int mutational_model=1; // Advanced setting. 1 == stepping stone model of reg mutation. otherwise, a lattice model is used.
+    
 //    // For output
 //    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
 };
@@ -136,7 +138,7 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
 double make_genos(double geno_value, double allelic_stdev, int rep);
 double getFitness(double xx, double yy, double xopt=300, double yopt=300, double om11=1000, double om12=500);
 
-void reg_mu(int indicator_int, string &network_char);
+void reg_mu(int indicator_int, string &network_char, int UseSteppingStone);
 //double mean(double some_array[], int size);
 
 
@@ -432,19 +434,19 @@ int main(int argc, char *argv[])
     uniform_int_distribution<> Dist0_2(0,2);        // This block is for the actual new value
     
     
-    //int tmpcounter(0);
+    int tmpcounter(0);
     for (int i=0; i<nrolls; i++){
         if(m_rateDist(e2)){
             mMutateRegulatoryArray[i] = Dist0_2(e2);
 //            cout << mMutateRegulatoryArray[i] << endl;
-            //tmpcounter++;
+            tmpcounter++;
         } else {
             mMutateRegulatoryArray[i] = 4;
-            //cout << mMutateRegulatoryArray[i] << endl;
+//            cout << mMutateRegulatoryArray[i] << endl;
         }
 
     }
-    //cout << "here's the freq estimate of reg_mu " << static_cast<double>(tmpcounter)/static_cast<double>(nrolls) << endl;
+    cout << "here's the freq estimate of reg_mu " << static_cast<double>(tmpcounter)/static_cast<double>(nrolls) << endl;
     
     
     // For migration we define an array of the same length as the others but
@@ -510,8 +512,11 @@ int main(int argc, char *argv[])
     //cout << "This is the population at the beginning " << endl;
 //    Pop.printPop(10);
     
-    int nSamples(500); // Only output the first nSamples of individuals
+    int nSamples(100); // Only output the first nSamples of individuals
 
+    
+    
+    
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
         
@@ -1978,7 +1983,13 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
         uniform_int_distribution<> pick_pairs(0, (numIndAS[p]-1)); //cout << "The total number of individuals in pop " << p << " are " << numIndAS[p] << endl;
         
         // Pick the starting index of the recombination rates array (2)
-        int index(dis(gen)); // cout << "The starting index is " << index << endl;
+        int index(dis(gen)); //cout << "The starting index is " << index << endl;
+        
+        // Pick the starting index for the coding mutations, index2
+        int index2(dis(gen)); //cout << "The starting index is " << index2 << endl;
+        
+        // Pick the starting index for the regulatory mutations, index3
+        int index3(dis(gen)); //cout << "The starting index is " << index3 << endl;
         
         /* From the surviving population we need to 'refill' a new one with 'numInd'
          * individuals. These new individuals have half of their genomes derived
@@ -1992,27 +2003,30 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
             int parent2(pick_pairs(gen2));
             
 //            cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
-            pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)+(mutate_code_array[index]);
+            pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)+(mutate_code_array[index2]);
             pop[p][i][0][0].regulatory = pop_after_selection[p][parent1][0][recomb_array[index]].regulatory;
-            reg_mu(mutate_reg_array[index], pop[p][i][0][0].regulatory); // This function mutates the regulatory region
+            reg_mu(mutate_reg_array[index3], pop[p][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
 
             
             //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop_after_selection[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
-            pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index+1]);
+            pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index2+1]);
             pop[p][i][1][0].regulatory = pop_after_selection[p][parent1][1][recomb_array[index+1]].regulatory;
-            reg_mu(mutate_reg_array[index+1],pop[p][i][1][0].regulatory); // This function mutates the regulatory region
+            reg_mu(mutate_reg_array[index3+1],pop[p][i][1][0].regulatory, mutational_model); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop_after_selection[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
-            pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index+2]);
+            pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index2+2]);
             pop[p][i][0][1].regulatory = pop_after_selection[p][parent2][0][recomb_array[index+2]].regulatory;
-            reg_mu(mutate_reg_array[index+2],pop[p][i][0][1].regulatory); // This function mutates the regulatory region
+            reg_mu(mutate_reg_array[index3+2],pop[p][i][0][1].regulatory, mutational_model); // This function mutates the regulatory region
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop_after_selection[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
-            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index+3]);
+            pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index2+3]);
             pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+3]].regulatory;
-            reg_mu(mutate_reg_array[index+3],pop[p][i][1][1].regulatory); // This function mutates the regulatory region
+            reg_mu(mutate_reg_array[index3+3],pop[p][i][1][1].regulatory, mutational_model); // This function mutates the regulatory region
             
             index+=4;
+            index2+=4;
+            index3+=4;
+            
         }
     }
 }
@@ -2054,23 +2068,23 @@ void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int
 //        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop[p][parent1][0][recomb_array[index]].coding << ")" << endl;
         hybrid_pool[0][i][0][0].coding =     pop[FirstParentsPop][parent1][0][recomb_array[index]].coding+(mutate_code_array[index]);
         hybrid_pool[0][i][0][0].regulatory = pop[FirstParentsPop][parent1][0][recomb_array[index]].regulatory;
-        reg_mu(mutate_reg_array[index], hybrid_pool[0][i][0][0].regulatory); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index], hybrid_pool[0][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
         
         
 //        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
         hybrid_pool[0][i][1][0].coding =     pop[FirstParentsPop][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index+1]);
         hybrid_pool[0][i][1][0].regulatory = pop[FirstParentsPop][parent1][1][recomb_array[index+1]].regulatory;
-        reg_mu(mutate_reg_array[index+1],hybrid_pool[0][i][1][0].regulatory); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index+1],hybrid_pool[0][i][1][0].regulatory, mutational_model); // This function mutates the regulatory region
         
 //        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
         hybrid_pool[0][i][0][1].coding =     pop[SecondParentsPop][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index+2]);
         hybrid_pool[0][i][0][1].regulatory = pop[SecondParentsPop][parent2][0][recomb_array[index+2]].regulatory;
-        reg_mu(mutate_reg_array[index+2],hybrid_pool[0][i][0][1].regulatory); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index+2],hybrid_pool[0][i][0][1].regulatory, mutational_model); // This function mutates the regulatory region
         
 //        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
         hybrid_pool[0][i][1][1].coding =     pop[SecondParentsPop][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index+3]);
         hybrid_pool[0][i][1][1].regulatory = pop[SecondParentsPop][parent2][1][recomb_array[index+3]].regulatory;
-        reg_mu(mutate_reg_array[index+3],hybrid_pool[0][i][1][1].regulatory); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index+3],hybrid_pool[0][i][1][1].regulatory, mutational_model); // This function mutates the regulatory region
         
         index+=4;
 //        cout << hybrid_pool[0][i][1][1].coding << "\t";
@@ -2936,21 +2950,50 @@ double make_genos(double geno_value, double allelic_stdev, int rep)
     return dist(e2);
 }
 
+
 // This function actually does the mutating of the regulatory networks
-void reg_mu(int indicator_int, string &network_char)
+// If UseSteppingStone (mutational_model) is set to 1 then there will be a stepping stone model of reg
+// mutation. This model draws random numbers so it will be slower than the lattice model.
+void reg_mu(int indicator_int, string &network_char, int UseSteppingStone)
 {
-    if(indicator_int==0)
+    
+    if(UseSteppingStone==1)
     {
-        network_char = "0";
-    } else if(indicator_int==1)
-    {
-        network_char = "1";
-    } else if(indicator_int==2)
-    {
-        network_char = "2";
-    } else {
-        network_char = network_char;
+        if((indicator_int!=4) & (network_char == "0"))
+        {
+            network_char = "1";
+        } else if((indicator_int!=4) & (network_char == "2"))
+        {
+            network_char = "1";
+        } else if((indicator_int!=4) & (network_char == "1"))
+        {
+            double TEST = rand()/static_cast<double>(RAND_MAX);
+            if(TEST>=0.5)
+            {
+                network_char = "2";
+            } else {
+                network_char = "0";
+            }
+        } else {
+            network_char = network_char;
+        }
     }
+    if(UseSteppingStone!=1)
+    {
+        if(indicator_int==0)
+        {
+            network_char = "0";
+        } else if(indicator_int==1)
+        {
+            network_char = "1";
+        } else if(indicator_int==2)
+        {
+            network_char = "2";
+        } else {
+            network_char = network_char;
+        }
+    }
+
 }
 
 
