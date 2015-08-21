@@ -58,7 +58,7 @@ public:
     locus**** pop;
     
     // Initialize variables that will make numPops populations
-    int numPops,numInd,numLoci,numAlleles;
+    int numPops,numInd,numLoci,numAlleles,FilialGens;
     int *numIndAS; // AS = after selection
     double mig_rate;
     int *numIndMigration;
@@ -90,12 +90,12 @@ public:
     
     // For selection:
     locus**** pop_after_selection;
-//    int nIndAS[];
+    //    int nIndAS[];
     void getRelativeFitness(); // For getting relative fitness
     void selection(int rep);
     
     // For mutating the regulatory alleles
-//    void reg_mu(int indicator_int, char &network_char);
+    //    void reg_mu(int indicator_int, char &network_char);
     
     // For Recobmining, mutating, and mating:
     void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep, int generationNumber);
@@ -125,14 +125,14 @@ public:
     // Print population to screen (for debugging)
     void printPop(int flag); // flag==1 then print only the last flag individuals
     
-        int mutational_model=1; // Advanced setting. 1 == stepping stone model of reg mutation. otherwise, a lattice model is used.
+    int mutational_model=1; // Advanced setting. 1 == stepping stone model of reg mutation. otherwise, a lattice model is used.
     
-//    // For output
-//    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
+    //    // For output
+    //    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
 };
 
 // Forward Declarations of Functions:       // Can be moved to a header file if gets too long.
-void input(Populations *popPtr, int POPS, int INDS, double MRATE);             // These are function prototypes
+void input(Populations *popPtr, int POPS, int INDS, double MRATE, int FGENS);             // These are function prototypes
 void printLocus(locus Locus);               // These are function prototypes
 void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double gamma, char *mod, double &a1, double &a2);
 double make_genos(double geno_value, double allelic_stdev, int rep);
@@ -155,9 +155,9 @@ void reg_mu(int indicator_int, string &network_char, int UseSteppingStone);
 int main(int argc, char *argv[])
 {
     
-//    // For outputing data to file:
-//    ofstream phenotypes_file;
-//    phenotypes_file.open ("ouput-phenotypes.txt");
+    //    // For outputing data to file:
+    //    ofstream phenotypes_file;
+    //    phenotypes_file.open ("ouput-phenotypes.txt");
     
     time_t start = time(0);
     
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
     ofstream fitness_file;
     
     // Seed random numbers
-//    std::seed_seq seq{1,2,3,4,5};
+    //    std::seed_seq seq{1,2,3,4,5};
     
     
     
@@ -177,8 +177,8 @@ int main(int argc, char *argv[])
     double x1(100);
     double x2(100);
     string reg_pattern;
-//    char* reg_pattern = nullptr;
-//    string PHENO_OUT = nullptr; //output_pheno_file
+    //    char* reg_pattern = nullptr;
+    //    string PHENO_OUT = nullptr; //output_pheno_file
     double theta(300);
     double gamma(1);
     char *mod = nullptr;
@@ -196,8 +196,9 @@ int main(int argc, char *argv[])
     int pheno_flag = 0;         // flags for default behavior of output names
     int fitness_flag = 0;       // flags for default behavior of output names
     
+    int FilialGens(1); // This is the number of filial generations to simulate
     
-//    double meanAbsFit(0);
+    //    double meanAbsFit(0);
     int outputFreq(100);          // frequency of output
     
     cout << "Reading in arguments" << endl <<  "\tNumber of arguments provided = " << (argc-1)/2 << endl;
@@ -205,6 +206,10 @@ int main(int argc, char *argv[])
         if(string(argv[i]) == "-npops"){
             numPops = atoi(argv[i+1]);
             cout << "\tNumber of populations = " << numPops << endl;
+        }
+        if(string(argv[i]) == "-FxGens"){
+            FilialGens = atoi(argv[i+1]);
+            cout << "\tNumber of filial generations = " << FilialGens << endl;
         }
         if(string(argv[i]) == "-i"){
             numInds = atoi(argv[i+1]);
@@ -332,18 +337,18 @@ int main(int argc, char *argv[])
     {
         fitness_file.open ("output-fitness.txt", ofstream::out | ofstream::app);
     }
-
+    
     
     srand(rep); //srand((unsigned int)time(NULL)); // not used anymore
     
- 
+    
     
     
     
     
     /*
-    BEGIN GENERATING RANDOM ARRAYS
-    */
+     BEGIN GENERATING RANDOM ARRAYS
+     */
     
     // Generate a random sequence of 1s and 0s for recombination:
     cout << "Finished reading in arguments." << endl << endl << "Building recombination and mutation arrays";
@@ -352,7 +357,7 @@ int main(int argc, char *argv[])
     cout << " with " << nrolls << " elements..." << endl;
     int *mRecombinationArray = new int[nrolls];                 // This will store binary array (1=recombination, 0=no recomb.)
     int *mRecombinationArray2 = new int[nrolls];                // This will store the modulus 2 output
-
+    
     double *mMutateCodingArray = new double[nrolls];                  // This array will store double of mutational effects
     int *mMutateRegulatoryArray = new int[nrolls];                 // For all 1s above, this will store the change in allelic value
     
@@ -360,9 +365,9 @@ int main(int argc, char *argv[])
     
     
     
-//    random_device generator;
+    //    random_device generator;
     mt19937 e2(rep);                                                                            // This should only be called once for a given scope
-
+    
     // This section fills in the recombination array with whether (1) or
     // not (0) a recombinatino event occurs given the recombination rate, rec.
     bernoulli_distribution distribution(rec);
@@ -371,7 +376,7 @@ int main(int argc, char *argv[])
         if (distribution(e2)){
             
             mRecombinationArray[i]=1;
-           //  cout << mRecombinationArray[i] << " " << endl;
+            //  cout << mRecombinationArray[i] << " " << endl;
         } else {
             mRecombinationArray[i]=0;
             // cout << mRecombinationArray[i] << endl;
@@ -393,44 +398,44 @@ int main(int argc, char *argv[])
      *     cout << mRecombinationArray[i] << "\t" << mRecombinationArray2[i] << endl;
      * }
      */
-
+    
     /* For coding and regulatory mutations we do a similar thing
-     * as the recombination rates except: 
+     * as the recombination rates except:
      * 1) failure is coded as 1.0 and
      * 2) success (mutation) is given my a normal distribution with mean
      * of one and variance of mu_var
      * From 1 and 2 this array becomes one of scaling factors where values!=1 reflect the change
      * of allelic values from pre-mutated coding allelic values */
     
-//    random_device generator2;                  // this defines the dist for whether mutation happens
-//    mt19937 e22(rep);
+    //    random_device generator2;                  // this defines the dist for whether mutation happens
+    //    mt19937 e22(rep);
     bernoulli_distribution distributionMU(mu);
     
-//    random_device rd;                          // this defines the dist for the mutational effects
-//    mt19937 e222(rep);                        // if a mutation happened
+    //    random_device rd;                          // this defines the dist for the mutational effects
+    //    mt19937 e222(rep);                        // if a mutation happened
     normal_distribution<double> dist2(0, mu_var);
     
-  
+    
     for (int i=0; i<nrolls; i++){
-       // cout << "This is the value: " << dist2(e22) << endl;
+        // cout << "This is the value: " << dist2(e22) << endl;
         if (distributionMU(e2)){
             
             mMutateCodingArray[i]= dist2(e2);
-//               cout << mMutateCodingArray[i] << " " << "\t";
+            //               cout << mMutateCodingArray[i] << " " << "\t";
         } else {
             mMutateCodingArray[i]= 0;
-//               cout << mMutateCodingArray[i] << "\t";
+            //               cout << mMutateCodingArray[i] << "\t";
         }
     }
     
     // For regulatory mutations we also do a similar thing.
-     
-//    random_device generator3;
-//    mt19937 e2222(rep);
+    
+    //    random_device generator3;
+    //    mt19937 e2222(rep);
     bernoulli_distribution m_rateDist(reg_mu);      // This block is for whether a mutation happens at all
     
-//    random_device zero_one_two;
-//    mt19937 e3(rep);
+    //    random_device zero_one_two;
+    //    mt19937 e3(rep);
     uniform_int_distribution<> Dist0_2(0,2);        // This block is for the actual new value
     
     
@@ -438,13 +443,13 @@ int main(int argc, char *argv[])
     for (int i=0; i<nrolls; i++){
         if(m_rateDist(e2)){
             mMutateRegulatoryArray[i] = Dist0_2(e2);
-//            cout << mMutateRegulatoryArray[i] << endl;
+            //            cout << mMutateRegulatoryArray[i] << endl;
             tmpcounter++;
         } else {
             mMutateRegulatoryArray[i] = 4;
-//            cout << mMutateRegulatoryArray[i] << endl;
+            //            cout << mMutateRegulatoryArray[i] << endl;
         }
-
+        
     }
     cout << "here's the freq estimate of reg_mu " << static_cast<double>(tmpcounter)/static_cast<double>(nrolls) << endl;
     
@@ -452,8 +457,8 @@ int main(int argc, char *argv[])
     // For migration we define an array of the same length as the others but
     // each element is distributed as a Poisson(numInds*m_rate).
     // The number of migrants can't be greater than the population size
-//    random_device Nm;
-//    mt19937 e4(rep);
+    //    random_device Nm;
+    //    mt19937 e4(rep);
     poisson_distribution<int> Poisson(static_cast<double>(numInds*m_rate));
     for (int i=0; i<nrolls; i++)
     {
@@ -470,7 +475,7 @@ int main(int argc, char *argv[])
             mMigrantArray[i] = rand_variable;
             flag++;
         } while (rand_variable>numInds);
-//        cout << mMigrantArray[i] << "\t";
+        //        cout << mMigrantArray[i] << "\t";
     }
     
     
@@ -485,13 +490,13 @@ int main(int argc, char *argv[])
      * estimated as well.*****************************************************************/
     
     Populations Pop;
-    input(&Pop, numPops, numInds, m_rate);
+    input(&Pop, numPops, numInds, m_rate, FilialGens);
     
     // Initialize genotypic values. These will be updated in the next function.
     double a1, a2;
     
     // Find the genotypic values that make the starting two-trait phenotype
-//    cout << "Just checking, theta is: " << theta<<endl;
+    //    cout << "Just checking, theta is: " << theta<<endl;
     Pheno_to_Geno(reg_pattern, x1, x2, theta, gamma, mod, a1, a2);
     
     // Initialize the populations by their...
@@ -507,13 +512,13 @@ int main(int argc, char *argv[])
     {
         Pop.getRelativeFitness();
     }
-
+    
     
     //cout << "This is the population at the beginning " << endl;
-//    Pop.printPop(10);
+    //    Pop.printPop(10);
     
     int nSamples(100); // Only output the first nSamples of individuals
-
+    
     
     
     
@@ -521,7 +526,7 @@ int main(int argc, char *argv[])
     for(int g=1; g<(1+num_generations); g++){
         
         
-      
+        
         if(g % 250 == 0 | g == 1)
         {
             cout << "Generation " << g << "\n";
@@ -529,24 +534,24 @@ int main(int argc, char *argv[])
         
         //cout << "This is the population before updating phenotypes for generation " << g << endl;
         //Pop.printPop(10);
-
+        
         
         // Get New Phenotypes
         Pop.getPheno(theta, gamma, *mod, 0);
-
-//        cout << "This is the population after updating phenotypes, before updating fitness for generation " << g << endl;
-//        Pop.printPop(10);
-
+        
+        //        cout << "This is the population after updating phenotypes, before updating fitness for generation " << g << endl;
+        //        Pop.printPop(10);
+        
         // Calculate Fitness:
         Pop.getFitness(0);
-
-//        cout << "This is the population after updating fitness for generation " << g << endl;
-//        Pop.printPop(10);
+        
+        //        cout << "This is the population after updating fitness for generation " << g << endl;
+        //        Pop.printPop(10);
         // For debugging / performance estimates
- 
+        
         if(g % outputFreq == 0 | g == 1)
         {
-
+            
             // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
             for(int p=0; p<numPops; p++)
             {
@@ -561,7 +566,7 @@ int main(int argc, char *argv[])
                     
                 }
             }
-           
+            
             
             
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
@@ -569,8 +574,8 @@ int main(int argc, char *argv[])
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 0 << "\t" <<
             Pop.meanAbsoluteFitness(0) << endl;
             
-       }
-       
+        }
+        
         // This overwrites the fitness values so it is important that the block below comes
         // after writing the meanAboluteFitness(0) value!
         if(selection_mode==1)
@@ -578,67 +583,67 @@ int main(int argc, char *argv[])
             Pop.getRelativeFitness();
             
         }
-  
-//        cout << "This is the population after converting to relative fitness for generation  " << g << endl;
-//        Pop.printPop(10);
-
+        
+        //        cout << "This is the population after converting to relative fitness for generation  " << g << endl;
+        //        Pop.printPop(10);
+        
         
         if(g % outputFreq == 0 | g == 1)
         {
             // ESTIMATING HYBRID FITNESS
             // 1 - Make hybrids
             Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls, rep, g);
-        
+            
             //            Pop.printHybrids(10); cout << endl;
             // 2 - calculate their phenotypes
             Pop.getPheno(theta, gamma, *mod, 1);            // 1 is a flag for hybrids
-//            Pop.printHybrids(10); cout << endl;
+            //            Pop.printHybrids(10); cout << endl;
             // 3 - calculate their absolute fitness
             Pop.getFitness(1);                              // Again, 1 is a flag for hybrids
-//            Pop.printHybrids(10); cout << endl;
+            //            Pop.printHybrids(10); cout << endl;
             // 4 - Ouput hybrid data
             fitness_file << 0 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
             gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
             Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << 1 << "\t" << // the 1 indicates hybrids
             Pop.meanAbsoluteFitness(1) << endl;
-
+            
             // Print the hybrid phenotypes to file
             // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
-                for(int i=0; i<(nSamples < numInds ? nSamples : numInds); i++)
-                {
-                    int p(0);
-                    phenotypes_file << -1 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
-                    gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
-                    Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
-                    Pop.hybrid_pool[p][i][0][0].regulatory << "\t" << Pop.hybrid_pool[p][i][0][1].regulatory << "\t" << Pop.hybrid_pool[p][i][1][0].regulatory << "\t" << Pop.pop[p][i][1][1].regulatory << "\t" <<
-                    Pop.hybrid_pool[p][i][0][0].coding <<"\t"<< Pop.hybrid_pool[p][i][0][1].coding <<"\t"<< Pop.hybrid_pool[p][i][1][0].coding <<"\t"<< Pop.hybrid_pool[p][i][1][1].coding << "\t" <<
-                    Pop.xyw_hybrids[p][i].xx << "\t"  << Pop.xyw_hybrids[p][i].yy << "\t" << Pop.xyw_hybrids[p][i].ww << endl;
-                    
-                }
+            for(int i=0; i<(nSamples < numInds ? nSamples : numInds); i++)
+            {
+                int p(0);
+                phenotypes_file << -1 <<"\t" << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
+                gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" <<
+                Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
+                Pop.hybrid_pool[p][i][0][0].regulatory << "\t" << Pop.hybrid_pool[p][i][0][1].regulatory << "\t" << Pop.hybrid_pool[p][i][1][0].regulatory << "\t" << Pop.pop[p][i][1][1].regulatory << "\t" <<
+                Pop.hybrid_pool[p][i][0][0].coding <<"\t"<< Pop.hybrid_pool[p][i][0][1].coding <<"\t"<< Pop.hybrid_pool[p][i][1][0].coding <<"\t"<< Pop.hybrid_pool[p][i][1][1].coding << "\t" <<
+                Pop.xyw_hybrids[p][i].xx << "\t"  << Pop.xyw_hybrids[p][i].yy << "\t" << Pop.xyw_hybrids[p][i].ww << endl;
+                
+            }
             
             
             
         }
-  
+        
         // Viability Selection:
         Pop.selection((rep+g)); // the +g part is so every generation experiences a different selection set of random numbers
-  
+        
         // Recombine, mutate, and mate the survivers
         Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls, rep, g);
-    
-       
+        
+        
         
         //  Migrate
         Pop.migratePop(mMigrantArray, nrolls, (rep+g));
-    
+        
     }
     double seconds_since_start = difftime( time(0), start);
     cout << "The total runtime was " << seconds_since_start << " seconds" << endl;
     
- 
+    
     Pop.getPheno(theta, gamma, *mod, 0);
     Pop.getFitness(0);
-
+    
     // Cleaning dynamically allocated memory
     delete[] mRecombinationArray;
     delete[] mRecombinationArray2;
@@ -649,11 +654,11 @@ int main(int argc, char *argv[])
     // Close output files
     phenotypes_file.close();
     fitness_file.close();
-
-//    Pop.printPop(10);
+    
+    //    Pop.printPop(10);
     
     
-
+    
     return 0;
 }
 
@@ -726,7 +731,7 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
     for(int i=0; i<static_cast<int>(1.25*numPops*numInd); i++)
     {
         migrant_pool[0][i]=new locus*[numLoci];
-      
+        
         for(int c=0;c<numLoci;c++)
         {
             migrant_pool[0][i][c]=new locus[numAlleles];
@@ -740,46 +745,52 @@ void Populations::initilizePop(string reg_pattern, double theta, double gamma, c
     // cout << "The mean number of migrants per generation is, Nm = " << static_cast<int>(numInd*mig_rate) << endl;
     
     /* This block initializes an array that is used for assessing hybrid fitness. It
-     * is one (hybrid) population by numInd long by 2 loci by 2 alleles. Like pop and 
+     * is one (hybrid) population by numInd long by 2 loci by 2 alleles. Like pop and
      * pop_after_select, each element of the array holds the regulatory and coding genotypes.
      * Unlike pop_after_select, however, fitness will be estimated from these genotypes so
      * There needs to be a phenotypes structure initialized (and destroyed)                 */
-     
-    hybrid_pool=new locus***[1];
-    hybrid_pool[0]=new locus**[numInd];
-    for(int i=0; i<numInd; i++)
+    
+    hybrid_pool=new locus***[FilialGens];
+    for(int f=0; f<FilialGens; f++)
     {
-        hybrid_pool[0][i]=new locus*[numLoci];
-        
-        for(int c=0;c<numLoci;c++)
+        hybrid_pool[f]=new locus**[numInd];
+        for(int i=0; i<numInd; i++)
         {
-            hybrid_pool[0][i][c]=new locus[numAlleles];
-            for(int l=0; l<numAlleles; l++)
+            hybrid_pool[f][i]=new locus*[numLoci];
+        
+            for(int c=0;c<numLoci;c++)
             {
-                hybrid_pool[0][i][c][l].coding = 0;
-                hybrid_pool[0][i][c][l].regulatory = "4";
+                hybrid_pool[f][i][c]=new locus[numAlleles];
+                for(int l=0; l<numAlleles; l++)
+                {
+                    hybrid_pool[f][i][c][l].coding = 0;
+                    hybrid_pool[f][i][c][l].regulatory = "4";
+                }
             }
         }
     }
-    
     // This is the phenotype and fitness phenotypes structure for the hybrid population
-    xyw_hybrids=new phenotypes*[1];
-    xyw_hybrids[0]=new phenotypes[numInd];
-    for(int i=0; i<numInd; i++)
-    {
-        xyw_hybrids[0][i].xx = 0.0;
-        xyw_hybrids[0][i].yy = 0.0;
-        xyw_hybrids[0][i].ww = 0.0;
+//    cout << "Testing: there are " << FilialGens << " hybrid generations." << endl;
+    xyw_hybrids=new phenotypes*[FilialGens];
+    for(int f=0; f<FilialGens; f++){
+        xyw_hybrids[f]=new phenotypes[numInd];
+        for(int i=0; i<numInd; i++)
+        {
+            xyw_hybrids[f][i].xx = 0.0;
+            xyw_hybrids[f][i].yy = 0.0;
+            xyw_hybrids[f][i].ww = 0.0;
+        }
     }
+
     
-//    //Testing
-//    mt19937 testing1(rep);
-//    mt19937 testing2(rep+1);
-//    bernoulli_distribution distribution(0.5);
-//    for(int i; i<100; i++)
-//    {
-//    cout << "This is : " << distribution(testing1) << "\t" << distribution(testing2) << endl;
-//    }
+    //    //Testing
+    //    mt19937 testing1(rep);
+    //    mt19937 testing2(rep+1);
+    //    bernoulli_distribution distribution(0.5);
+    //    for(int i; i<100; i++)
+    //    {
+    //    cout << "This is : " << distribution(testing1) << "\t" << distribution(testing2) << endl;
+    //    }
 }
 
 void Populations::initilizeXYs()
@@ -813,8 +824,8 @@ void Populations::deletePops_XYs()
         delete pop[p];
         delete xys[p];
         delete pop_after_selection[p];
-
-//        delete numIndAS;
+        
+        //        delete numIndAS;
     }
     
     // Delete the migrant pool
@@ -829,18 +840,25 @@ void Populations::deletePops_XYs()
     delete migrant_pool[0];
     
     // Delete the hybrid pool
-    for(int i=0; i<numInd; i++)
+    for(int f=0; f<FilialGens; f++)
     {
-        for(int c=0; c<numLoci; c++)
+        for(int i=0; i<numInd; i++)
         {
-            delete[] hybrid_pool[0][i][c];
+            for(int c=0; c<numLoci; c++)
+            {
+                delete[] hybrid_pool[f][i][c];
+            }
+            delete hybrid_pool[f][i];
         }
-        delete hybrid_pool[0][i];
+        delete hybrid_pool[f];
     }
-    delete hybrid_pool[0];
+
     
     // Delete the hybrid phenotypes struct
-    delete xyw_hybrids[0];
+    for(int f=0; f<FilialGens; f++)
+    {
+        delete xyw_hybrids[f];
+    }
     delete xyw_hybrids;
     
     
@@ -852,7 +870,7 @@ void Populations::deletePops_XYs()
     delete[] numIndAS;
     delete[] numIndMigration;
     delete hybrid_pool;
-
+    
 }
 
 void Populations::printPop(int flag)
@@ -954,17 +972,17 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
                               xys[p][i].xx,
                               xys[p][i].yy);
                 //Testing
-//                geno_to_pheno(150.312,
-//                              151.526,
-//                              144.518,
-//                              151.526,
-//                              "1","1","1","1",
-//                              theta,
-//                              gamma,
-//                              mod,
-//                              xys[p][i].xx,
-//                              xys[p][i].yy);
-
+                //                geno_to_pheno(150.312,
+                //                              151.526,
+                //                              144.518,
+                //                              151.526,
+                //                              "1","1","1","1",
+                //                              theta,
+                //                              gamma,
+                //                              mod,
+                //                              xys[p][i].xx,
+                //                              xys[p][i].yy);
+                
             }
             
         }
@@ -972,7 +990,7 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
     {
         for(int i=0; i<numInd; i++)
         {
-//            cout << "The next line is a hybrid" << endl;
+            //            cout << "The next line is a hybrid" << endl;
             int p(0);
             geno_to_pheno(hybrid_pool[p][i][0][0].coding,
                           hybrid_pool[p][i][0][1].coding,
@@ -987,8 +1005,8 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
                           mod,
                           xyw_hybrids[p][i].xx,
                           xyw_hybrids[p][i].yy);
-//            xyw_hybrids[p][i].ww=1;
-//            cout << i << "\t" << xyw_hybrids[p][i].xx << "\t" << xyw_hybrids[p][i].yy << endl;
+            //            xyw_hybrids[p][i].ww=1;
+            //            cout << i << "\t" << xyw_hybrids[p][i].xx << "\t" << xyw_hybrids[p][i].yy << endl;
         }
     } else
     {
@@ -1001,10 +1019,10 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
 void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, string r00, string r01, string r10, string r11, double theta, double gamma, char mod, double &XX, double &YY)
 {
     using namespace std;
-//        cout << "model is: " << mod << endl;
+    //        cout << "model is: " << mod << endl;
     switch(mod)
     {
-
+            
         case 'A':
             if(r00 == "0" && r01 == "0" && r10=="0" && r11=="0"){
                 XX = (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow((-a11-a12+a21+a22+gamma*theta),2)))/(2*gamma);
@@ -1574,10 +1592,10 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             
             
             if(r00 == "1" && r01 == "1" && r10 == "1" && r11 == "1"){
-//                cout << "I'm in here!!!" << endl;
+                //                cout << "I'm in here!!!" << endl;
                 XX = (a11+a12)/gamma;
                 YY = (a21+a22)/gamma;
-//                cout << "a11= "<<a11<<" a12= " << a12 << " a21= " << a21 << " a22= " << a22 << " XX is " << XX << " and YY is " << YY << endl;
+                //                cout << "a11= "<<a11<<" a12= " << a12 << " a21= " << a21 << " a22= " << a22 << " XX is " << XX << " and YY is " << YY << endl;
             }
             
             
@@ -1657,7 +1675,7 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
                 XX = (1/(2*gamma*(2*(a21+a22)+gamma*theta)))*(4*a11*a21+2*a12*a21+4*a11*a22+2*a12*a22+a11*gamma*theta+a12*gamma*theta-a21*gamma*theta-a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow(4*a11*(a21+a22)+2*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta),2)));
                 YY = (1/(2*gamma*(2*a11+a12+gamma*theta)))*(4*a11*a21+2*a12*a21+4*a11*a22+2*a12*a22-a11*gamma*theta-a12*gamma*theta+a21*gamma*theta+a22*gamma*theta-pow(gamma, 2)*pow(theta, 2)+sqrt(4*gamma*theta*(2*(a21+a22)+gamma*theta)*((2*a11+a12)*(a21+a22)+(a11+a12)*gamma*theta)+pow(4*a11*(a21+a22)+2*a12*(a21+a22)+a11*gamma*theta+a12*gamma*theta-gamma*theta*(a21+a22+gamma*theta),2)));
             }
-
+            
             
             if(r00 == "0" && r01 == "2" && r10 == "0" && r11 == "0"){
                 XX = ((a11+a12-a21-a22)*theta-gamma*pow(theta, 2)+sqrt(pow(theta, 2)*(4*(a21+a22)*(2*a12+gamma*theta)+pow((a11+a12-a21-a22+gamma*theta),2))))/(2*gamma*theta);
@@ -1824,9 +1842,9 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             break;
     }
     
-//    cout << "Troubleshooting: theta: "<<theta<<", gamma: "<<gamma<<" "<<r00<<r01<<r10<<r11<<" a11: "<<a11<<" a12: "<<a12<<" a21: "<<a21<<" a22: "<<a22<< " x: "<<XX<<" y: "<<YY<<endl;
-//    cout << (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma) << " " <<
-//    (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow(-a11-a12+a21+a22+gamma*theta,2)))/(2*gamma) << endl;
+    //    cout << "Troubleshooting: theta: "<<theta<<", gamma: "<<gamma<<" "<<r00<<r01<<r10<<r11<<" a11: "<<a11<<" a12: "<<a12<<" a21: "<<a21<<" a22: "<<a22<< " x: "<<XX<<" y: "<<YY<<endl;
+    //    cout << (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma) << " " <<
+    //    (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow(-a11-a12+a21+a22+gamma*theta,2)))/(2*gamma) << endl;
     
 }
 
@@ -1865,7 +1883,7 @@ void Populations::getFitness(int flag) // hybrid optimum is assumed to be identi
         cout << "flag needs to be 1 for hybrids and 0 otherwise. Aborting simulation\n";
         exit(4);
     }
-
+    
     
     
 }
@@ -1893,7 +1911,7 @@ void Populations::pheno_to_fitness(double xx, double yy, double xopt, double yop
     
     W = exp(-0.5*(r*dx + s*dy));
     
- 
+    
 }
 
 void Populations::getRelativeFitness()
@@ -1915,12 +1933,12 @@ void Populations::getRelativeFitness()
         for(int i=0; i<numInd; i++)
         {
             if(maxW==0){
-               xys[p][i].ww = 1;
+                xys[p][i].ww = 1;
             } else
             {
                 xys[p][i].ww = (xys[p][i].ww / maxW);
             }
-           
+            
         }
     }
 }
@@ -1929,13 +1947,13 @@ void Populations::getRelativeFitness()
 void Populations::selection(int rep){   // 5/11/2015: I updated this for the C++11 standard. Still needs debuging
     for(int p=0; p<numPops; p++){
         numIndAS[p]=0;
-
+        
         for(int i=0; i<numInd; i++){
-//            mt19937 TEST(rep+p+i);
+            //            mt19937 TEST(rep+p+i);
             double TEST = rand()/static_cast<double>(RAND_MAX);
-//            uniform_real_distribution<double> dist(0.0, 1.0);
-//            if(dist(TEST)<xys[p][i].ww){ // Individual lives
-              if(TEST<xys[p][i].ww){ // Individual lives
+            //            uniform_real_distribution<double> dist(0.0, 1.0);
+            //            if(dist(TEST)<xys[p][i].ww){ // Individual lives
+            if(TEST<xys[p][i].ww){ // Individual lives
                 for(int c=0; c<numLoci; c++){
                     for(int a=0; a<numAlleles; a++){
                         // Put the surviving individual in the after selection bin:
@@ -1956,7 +1974,7 @@ void Populations::selection(int rep){   // 5/11/2015: I updated this for the C++
             exit(1);
         }
         // Debugging:
-//        cout << "The number of individuals retained in population " << p << " = " << numIndAS[p] << endl;
+        //        cout << "The number of individuals retained in population " << p << " = " << numIndAS[p] << endl;
     }
 }
 
@@ -1965,12 +1983,12 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
 {
     /* Here is the random number generator that samples the starting position
      * of the recombination array (2) */
-//    random_device rd;
+    //    random_device rd;
     mt19937 gen(rep+generationNumber);                                                                                     // fix this to rep
     uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
     
     // This generator is for picking the parents
-//    random_device rd2;
+    //    random_device rd2;
     mt19937 gen1(rep+generationNumber);
     mt19937 gen2((-1*rep-generationNumber));
     
@@ -1996,17 +2014,17 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
          * from each of their parents' gametes */
         for (int i=0; i<numInd; i++)
         {
-
+            
             uniform_int_distribution<> pick_pairs(0, static_cast<int>(numIndAS[p]-1));
             
             int parent1(pick_pairs(gen1));
             int parent2(pick_pairs(gen2));
             
-//            cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
+            //            cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
             pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)+(mutate_code_array[index2]);
             pop[p][i][0][0].regulatory = pop_after_selection[p][parent1][0][recomb_array[index]].regulatory;
             reg_mu(mutate_reg_array[index3], pop[p][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
-
+            
             
             //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop_after_selection[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
             pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index2+1]);
@@ -2035,22 +2053,22 @@ void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int
 {
     // Need to define a random number generator that picks a uniform random
     // integer between 0 and numPops to choose a population
-//    random_device rd3;
+    //    random_device rd3;
     mt19937 gen(rep+generationNumber);
     uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
-
+    
     uniform_int_distribution<> pick_pop(0, (numPops-1));
     
     // Need to define a random number generator that picks a parents via
     // a uniform random integer between 0 and numInd
-//    random_device rd2;
-//    mt19937 gen2(1);
+    //    random_device rd2;
+    //    mt19937 gen2(1);
     uniform_int_distribution<> pick_pairs(0, (numInd-1));
     
     // Need a generator for picking the starting point of the recomb_array
-//    random_device rd;
-//    mt19937 gen(1);
-
+    //    random_device rd;
+    //    mt19937 gen(1);
+    
     // Fill in the hybrid_pool with F1 recombinants of parental populations
     int index(dis(gen));// cout << "The starting hybrids index is " << index << endl;
     
@@ -2067,30 +2085,30 @@ void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int
         int FirstParentsPop(pick_pop(gen)); // cout << "The first parent pop is " << FirstParentsPop << endl;
         int SecondParentsPop;
         do{
-           SecondParentsPop = pick_pop(gen);
+            SecondParentsPop = pick_pop(gen);
         } while(SecondParentsPop==FirstParentsPop); // This do while loop ensures that mating don't occur from within a population
         
         
         int parent1(pick_pairs(gen));
         int parent2(pick_pairs(gen));
-//        int p(0);
-//        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop[p][parent1][0][recomb_array[index]].coding << ")" << endl;
+        //        int p(0);
+        //        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop[p][parent1][0][recomb_array[index]].coding << ")" << endl;
         hybrid_pool[0][i][0][0].coding =     pop[FirstParentsPop][parent1][0][recomb_array[index]].coding+(mutate_code_array[index2]);
         hybrid_pool[0][i][0][0].regulatory = pop[FirstParentsPop][parent1][0][recomb_array[index]].regulatory;
         reg_mu(mutate_reg_array[index3], hybrid_pool[0][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
         
         
-//        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
+        //        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
         hybrid_pool[0][i][1][0].coding =     pop[FirstParentsPop][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index2+1]);
         hybrid_pool[0][i][1][0].regulatory = pop[FirstParentsPop][parent1][1][recomb_array[index+1]].regulatory;
         reg_mu(mutate_reg_array[index3+1],hybrid_pool[0][i][1][0].regulatory, mutational_model); // This function mutates the regulatory region
         
-//        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
+        //        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
         hybrid_pool[0][i][0][1].coding =     pop[SecondParentsPop][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index2+2]);
         hybrid_pool[0][i][0][1].regulatory = pop[SecondParentsPop][parent2][0][recomb_array[index+2]].regulatory;
         reg_mu(mutate_reg_array[index3+2],hybrid_pool[0][i][0][1].regulatory, mutational_model); // This function mutates the regulatory region
         
-//        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
+        //        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
         hybrid_pool[0][i][1][1].coding =     pop[SecondParentsPop][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index2+3]);
         hybrid_pool[0][i][1][1].regulatory = pop[SecondParentsPop][parent2][1][recomb_array[index+3]].regulatory;
         reg_mu(mutate_reg_array[index3+3],hybrid_pool[0][i][1][1].regulatory, mutational_model); // This function mutates the regulatory region
@@ -2098,17 +2116,17 @@ void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int
         index+=4;
         index2+=4;
         index3+=4;
-//        cout << hybrid_pool[0][i][1][1].coding << "\t";
+        //        cout << hybrid_pool[0][i][1][1].coding << "\t";
     }
     
 }
 
 void Populations::migratePop(int *mig_array, int rolls, int rep)
 {
- 
+    
     
     // This random number generator is for sampling the index (i.e., starting) value of the mig_array
-//    random_device rd;
+    //    random_device rd;
     mt19937 gen(rep);
     uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numPops+1)));
     
@@ -2170,7 +2188,7 @@ void Populations::migratePop(int *mig_array, int rolls, int rep)
     //        cout << endl;
     //    }
     //    cout << endl;
-
+    
     random_shuffle(&migrant_pool[0][0], &migrant_pool[0][(CurrentMigrantCount)]);
     
     //    for(int i=0; i<CurrentMigrantCount; i++)
@@ -2230,20 +2248,20 @@ double Populations::meanAbsoluteFitness(int flag)
         for(int i=0; i<numInd; i++)
         {
             sum+=xyw_hybrids[0][i].ww;
-
+            
         }
         avg = sum/static_cast<double>(numInd);
     }
-   
+    
     return avg;
     
-
+    
 }
 
 //void Populations::outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit)
 //{
 //
-//    
+//
 //
 //}
 
@@ -2259,7 +2277,7 @@ double Populations::meanAbsoluteFitness(int flag)
  *                                              *
  *                                              *
  * * * * * * * * * * * * * * * * * * * * * * * */
-void input(Populations *popPtr, int POPS, int INDS, double MRATE)
+void input(Populations *popPtr, int POPS, int INDS, double MRATE, int FGENS)
 {
     
     (*popPtr).numPops = POPS;
@@ -2272,6 +2290,7 @@ void input(Populations *popPtr, int POPS, int INDS, double MRATE)
     (*popPtr).numAlleles =2;
     //cout<<"# of alleles are "<<(*popPtr).numAlleles<<endl;
     (*popPtr).mig_rate = MRATE;
+    (*popPtr).FilialGens = FGENS;
 }
 
 void printLocus(locus Locus)
@@ -2685,7 +2704,7 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
             if(reg_pattern=="1022"){
                 a1=(2*gamma*x*(theta+y))/(2*theta+y);
                 a2=(gamma*(theta+x)*y)/(theta+2*x);
-               
+                
             }
             if(reg_pattern=="2000"){
                 a1=gamma*x;
@@ -2794,7 +2813,7 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
             if(reg_pattern=="1122"){
                 a1=gamma*x;
                 a2=(gamma*(theta+x)*y)/(theta+2*x);
-//                 cout << "The starting motif is 1122 for model B" << endl;
+                //                 cout << "The starting motif is 1122 for model B" << endl;
                 cout << "This is alpha 1: " << a1 << " and this is alpha 2: " << a2 << endl;
             }
             if(reg_pattern=="2100"){
@@ -2941,23 +2960,23 @@ void Pheno_to_Geno(string reg_pattern, double x, double y, double theta, double 
                 a1=(gamma*x*(theta+y))/(theta+2*y);
                 a2=(gamma*(theta+x)*y)/(theta+2*x);
             }
-//            cout << "Reg pattern: " << reg_pattern << " This is alpha 1: " << a1 << " and this is alpha 2: " << a2 << endl;
+            //            cout << "Reg pattern: " << reg_pattern << " This is alpha 1: " << a1 << " and this is alpha 2: " << a2 << endl;
             break;
     }
     
     
     cout << "reg = " << reg_pattern << " x = " << x << " y = " << y << " theta = " << theta << " gamma= " << gamma << " model= " << mod << " a1= " << a1 << " a2= " << a2 << endl;
-//    x = 20.3;
+    //    x = 20.3;
 }
 
 double make_genos(double geno_value, double allelic_stdev, int rep)
 {
     using namespace std;
-//    random_device rd;
+    //    random_device rd;
     mt19937 e2(rep);
     normal_distribution<double> dist(0, allelic_stdev);
     
-//        cout << "Here's the result: " <<  dist(e2) << endl;
+    //        cout << "Here's the result: " <<  dist(e2) << endl;
     return dist(e2);
 }
 
@@ -3004,9 +3023,8 @@ void reg_mu(int indicator_int, string &network_char, int UseSteppingStone)
             network_char = network_char;
         }
     }
-
+    
 }
-
 
 
 
