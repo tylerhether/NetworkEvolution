@@ -98,7 +98,7 @@ public:
 //    void reg_mu(int indicator_int, char &network_char);
     
     // For Recobmining, mutating, and mating:
-    void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep);
+    void recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep, int generationNumber);
     
     // For migrating:
     locus**** migrant_pool;
@@ -106,7 +106,7 @@ public:
     
     // For assessing hybrid fitness:
     locus**** hybrid_pool;
-    void make_hybrids(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep);
+    void make_hybrids(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep, int generationNumber);
     void printHybrids(int flag); // for printing hybrids to screen
     
     // For cleaning up.
@@ -587,7 +587,7 @@ int main(int argc, char *argv[])
         {
             // ESTIMATING HYBRID FITNESS
             // 1 - Make hybrids
-            Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls, rep);
+            Pop.make_hybrids(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls, rep, g);
         
             //            Pop.printHybrids(10); cout << endl;
             // 2 - calculate their phenotypes
@@ -624,7 +624,7 @@ int main(int argc, char *argv[])
         Pop.selection((rep+g)); // the +g part is so every generation experiences a different selection set of random numbers
   
         // Recombine, mutate, and mate the survivers
-        Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls, (rep+g));
+        Pop.recombine_mutate_matePop(mRecombinationArray2, mMutateCodingArray, mMutateRegulatoryArray, nrolls, rep, g);
     
        
         
@@ -1961,18 +1961,18 @@ void Populations::selection(int rep){   // 5/11/2015: I updated this for the C++
 }
 
 
-void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep)
+void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep, int generationNumber)
 {
     /* Here is the random number generator that samples the starting position
      * of the recombination array (2) */
 //    random_device rd;
-    mt19937 gen(rep);                                                                                     // fix this to rep
+    mt19937 gen(rep+generationNumber);                                                                                     // fix this to rep
     uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
     
     // This generator is for picking the parents
 //    random_device rd2;
-    mt19937 gen1(rep);
-    mt19937 gen2((-1*rep));
+    mt19937 gen1(rep+generationNumber);
+    mt19937 gen2((-1*rep-generationNumber));
     
     /* So for each population we need to mate the surviving individuals at random.
      * The number of surviving individuals for each p populations is in the integer
@@ -1983,13 +1983,13 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
         uniform_int_distribution<> pick_pairs(0, (numIndAS[p]-1)); //cout << "The total number of individuals in pop " << p << " are " << numIndAS[p] << endl;
         
         // Pick the starting index of the recombination rates array (2)
-        int index(dis(gen)); //cout << "The starting index is " << index << endl;
+        int index(dis(gen));// cout << "The starting parents index is " << index << endl;
         
         // Pick the starting index for the coding mutations, index2
-        int index2(dis(gen)); //cout << "The starting index is " << index2 << endl;
+        int index2(dis(gen));// cout << "The starting parents index2 is " << index2 << endl;
         
         // Pick the starting index for the regulatory mutations, index3
-        int index3(dis(gen)); //cout << "The starting index is " << index3 << endl;
+        int index3(dis(gen));// cout << "The starting parents index3 is " << index3 << endl;
         
         /* From the surviving population we need to 'refill' a new one with 'numInd'
          * individuals. These new individuals have half of their genomes derived
@@ -2031,62 +2031,73 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
     }
 }
 
-void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep)
+void Populations::make_hybrids(int *recomb_array, double *mutate_code_array, int *mutate_reg_array, int rolls, int rep, int generationNumber)
 {
     // Need to define a random number generator that picks a uniform random
     // integer between 0 and numPops to choose a population
 //    random_device rd3;
-    mt19937 gen3(rep);
+    mt19937 gen(rep+generationNumber);
+    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
+
     uniform_int_distribution<> pick_pop(0, (numPops-1));
     
     // Need to define a random number generator that picks a parents via
     // a uniform random integer between 0 and numInd
 //    random_device rd2;
-//    mt19937 gen2(1);                                                                                    // fix this to rep
+//    mt19937 gen2(1);
     uniform_int_distribution<> pick_pairs(0, (numInd-1));
     
     // Need a generator for picking the starting point of the recomb_array
 //    random_device rd;
-//    mt19937 gen(1);                                                                                     // fix this to rep
-    uniform_int_distribution<> dis(0, static_cast<int>(rolls-(4*numInd+1)));
-    
+//    mt19937 gen(1);
+
     // Fill in the hybrid_pool with F1 recombinants of parental populations
-    int index(dis(gen3)); // This is the starting point in the recombination array (2)
+    int index(dis(gen));// cout << "The starting hybrids index is " << index << endl;
+    
+    // Pick the starting index for the coding mutations, index2
+    int index2(dis(gen));// cout << "The starting hybrids index2 is " << index2 << endl;
+    
+    // Pick the starting index for the regulatory mutations, index3
+    int index3(dis(gen));// cout << "The starting hybrids index3 is " << index3 << endl;
+    
+    
     for(int i=0; i<numInd; i++)
     {
         
-        int FirstParentsPop(pick_pop(gen3));
+        int FirstParentsPop(pick_pop(gen)); // cout << "The first parent pop is " << FirstParentsPop << endl;
         int SecondParentsPop;
         do{
-           SecondParentsPop = pick_pop(gen3);
+           SecondParentsPop = pick_pop(gen);
         } while(SecondParentsPop==FirstParentsPop); // This do while loop ensures that mating don't occur from within a population
         
         
-        int parent1(pick_pairs(gen3));
-        int parent2(pick_pairs(gen3));
+        int parent1(pick_pairs(gen));
+        int parent2(pick_pairs(gen));
 //        int p(0);
 //        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop[p][parent1][0][recomb_array[index]].coding << ")" << endl;
-        hybrid_pool[0][i][0][0].coding =     pop[FirstParentsPop][parent1][0][recomb_array[index]].coding+(mutate_code_array[index]);
+        hybrid_pool[0][i][0][0].coding =     pop[FirstParentsPop][parent1][0][recomb_array[index]].coding+(mutate_code_array[index2]);
         hybrid_pool[0][i][0][0].regulatory = pop[FirstParentsPop][parent1][0][recomb_array[index]].regulatory;
-        reg_mu(mutate_reg_array[index], hybrid_pool[0][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index3], hybrid_pool[0][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
         
         
 //        cout << "The first parent is # " << parent1 << " from population " << FirstParentsPop << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
-        hybrid_pool[0][i][1][0].coding =     pop[FirstParentsPop][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index+1]);
+        hybrid_pool[0][i][1][0].coding =     pop[FirstParentsPop][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index2+1]);
         hybrid_pool[0][i][1][0].regulatory = pop[FirstParentsPop][parent1][1][recomb_array[index+1]].regulatory;
-        reg_mu(mutate_reg_array[index+1],hybrid_pool[0][i][1][0].regulatory, mutational_model); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index3+1],hybrid_pool[0][i][1][0].regulatory, mutational_model); // This function mutates the regulatory region
         
 //        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
-        hybrid_pool[0][i][0][1].coding =     pop[SecondParentsPop][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index+2]);
+        hybrid_pool[0][i][0][1].coding =     pop[SecondParentsPop][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index2+2]);
         hybrid_pool[0][i][0][1].regulatory = pop[SecondParentsPop][parent2][0][recomb_array[index+2]].regulatory;
-        reg_mu(mutate_reg_array[index+2],hybrid_pool[0][i][0][1].regulatory, mutational_model); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index3+2],hybrid_pool[0][i][0][1].regulatory, mutational_model); // This function mutates the regulatory region
         
 //        cout << "The second parent is # " << parent2 << " from population " << SecondParentsPop << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
-        hybrid_pool[0][i][1][1].coding =     pop[SecondParentsPop][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index+3]);
+        hybrid_pool[0][i][1][1].coding =     pop[SecondParentsPop][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index2+3]);
         hybrid_pool[0][i][1][1].regulatory = pop[SecondParentsPop][parent2][1][recomb_array[index+3]].regulatory;
-        reg_mu(mutate_reg_array[index+3],hybrid_pool[0][i][1][1].regulatory, mutational_model); // This function mutates the regulatory region
+        reg_mu(mutate_reg_array[index3+3],hybrid_pool[0][i][1][1].regulatory, mutational_model); // This function mutates the regulatory region
         
         index+=4;
+        index2+=4;
+        index3+=4;
 //        cout << hybrid_pool[0][i][1][1].coding << "\t";
     }
     
