@@ -187,7 +187,8 @@ int main(int argc, char *argv[])
     double XOPT(300);                // Trait 1 optimum
     double YOPT(300);                // Trait 2 optimum
     double OM11(10000);                // Variance in stabilizing selection (for all pops)
-    double OM12(0);
+//    double OM12(0);                    // Covariance in stablizing selection for all pops
+    double OM12CORR(0);                // Correlation in stabilizing selection for all pops
     double rec(0.5);                  // This is the recombination rate between coding loci
     double m_rate(0.0);
     int rep(1);                 // Replicate number
@@ -196,7 +197,7 @@ int main(int argc, char *argv[])
     int pheno_flag = 0;         // flags for default behavior of output names
     int fitness_flag = 0;       // flags for default behavior of output names
     
-    int FilialGens(1); // This is the number of filial generations to simulate
+    int FilialGens(2); // This is the number of filial generations to simulate
     
     //    double meanAbsFit(0);
     int outputFreq(100);          // frequency of output
@@ -276,9 +277,9 @@ int main(int argc, char *argv[])
             OM11 = atof(argv[i+1]);
             cout << "\tVariance in stabilizing selection = " << OM11 << endl;
         }
-        if(string(argv[i]) == "-sel_covar"){
-            OM12 = atof(argv[i+1]);
-            cout << "\tCovariance in stabilizing selection = " << OM12 << endl;
+        if(string(argv[i]) == "-sel_corr"){
+            OM12CORR = atof(argv[i+1]);
+            cout << "\tCorrelation in stabilizing selection = " << OM12CORR << endl;
         }
         if(string(argv[i]) == "-rec"){
             rec = atof(argv[i+1]);
@@ -339,6 +340,11 @@ int main(int argc, char *argv[])
     }
     
     
+    
+    // Compute the new covariance in stabilizing selection: Cov(X,Y) = corr(X,Y)*sd(X)*sd(Y)
+    double OM12(OM12CORR*OM11);
+    cout << "Covariance in stabilizing selection is: " << OM12 << endl;
+    
     srand(rep); //srand((unsigned int)time(NULL)); // not used anymore
     
     
@@ -353,7 +359,7 @@ int main(int argc, char *argv[])
     // Generate a random sequence of 1s and 0s for recombination:
     cout << "Finished reading in arguments." << endl << endl << "Building recombination and mutation arrays";
     
-    int nrolls=50000+(4*numInds*FilialGens);                        // There are 50000 possible starting points
+    int nrolls=100000+(4*numInds*FilialGens*numPops);                        // There are 100000 possible starting points
     cout << " with " << nrolls << " elements..." << endl;
     int *mRecombinationArray = new int[nrolls];                 // This will store binary array (1=recombination, 0=no recomb.)
     int *mRecombinationArray2 = new int[nrolls];                // This will store the modulus 2 output
@@ -527,7 +533,7 @@ int main(int argc, char *argv[])
         
         
         
-        if(g % 250 == 0 | g == 1)
+        if(g % 250 == 0)
         {
             cout << "Generation " << g << "\n";
         }
@@ -549,7 +555,7 @@ int main(int argc, char *argv[])
         //        Pop.printPop(10);
         // For debugging / performance estimates
         
-        if(g % outputFreq == 0 | g == 1)
+        if(g % outputFreq == 0)
         {
             
             // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
@@ -590,7 +596,7 @@ int main(int argc, char *argv[])
         //        Pop.printPop(10);
         
         
-        if(g % outputFreq == 0 | g == 1)
+        if(g % outputFreq == 0)
         {
             // ESTIMATING HYBRID FITNESS
             // 1 - Make hybrids
@@ -2019,6 +2025,10 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
         // Pick the starting index for the regulatory mutations, index3
         int index3(dis(gen));// cout << "The starting parents index3 is " << index3 << endl;
         
+        
+//        cout << "index for population " << p << " at generation " << generationNumber << ": " << (index3) << endl;
+
+        
         /* From the surviving population we need to 'refill' a new one with 'numInd'
          * individuals. These new individuals have half of their genomes derived
          * from each of their parents' gametes */
@@ -2030,26 +2040,44 @@ void Populations::recombine_mutate_matePop(int *recomb_array, double *mutate_cod
             int parent1(pick_pairs(gen1));
             int parent2(pick_pairs(gen2));
             
+//            cout << "\n\n" << "index=" << (index3) << " " << (index3+1) << " " << (index3+2) << " " << (index3+3) << endl;
+
+            
             //            cout << "The first parent is # " << parent1 << " and its picked allele at the first locus is " << recomb_array[index] << " (" <<pop_after_selection[p][parent1][0][recomb_array[index]].coding << ")" << endl;
             pop[p][i][0][0].coding =     (pop_after_selection[p][parent1][0][recomb_array[index]].coding)+(mutate_code_array[index2]);
+            
+//            cout << " before mutation " << pop[p][i][0][0].regulatory << "";
             pop[p][i][0][0].regulatory = pop_after_selection[p][parent1][0][recomb_array[index]].regulatory;
             reg_mu(mutate_reg_array[index3], pop[p][i][0][0].regulatory, mutational_model); // This function mutates the regulatory region
-            
+//            cout << " after mutation " << pop[p][i][0][0].regulatory << "";
             
             //cout << "The first parent is # " << parent1 << " and its picked allele at the second locus is " << recomb_array[index+1] << " (" << pop_after_selection[p][parent1][1][recomb_array[index+1]].coding << ")" << endl;
+            
+//            cout << " before mutation " << pop[p][i][1][0].regulatory << "";
             pop[p][i][1][0].coding =     pop_after_selection[p][parent1][1][recomb_array[index+1]].coding+(mutate_code_array[index2+1]);
             pop[p][i][1][0].regulatory = pop_after_selection[p][parent1][1][recomb_array[index+1]].regulatory;
             reg_mu(mutate_reg_array[index3+1],pop[p][i][1][0].regulatory, mutational_model); // This function mutates the regulatory region
+//            cout << " after mutation " << pop[p][i][1][0].regulatory << "";
+            
+            
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the first locus is " << recomb_array[index+2] << " (" << pop_after_selection[p][parent2][0][recomb_array[index+2]].coding<< ")" << endl;
+//            cout << " before mutation " << pop[p][i][0][1].regulatory << "";
             pop[p][i][0][1].coding =     pop_after_selection[p][parent2][0][recomb_array[index+2]].coding+(mutate_code_array[index2+2]);
             pop[p][i][0][1].regulatory = pop_after_selection[p][parent2][0][recomb_array[index+2]].regulatory;
-            reg_mu(mutate_reg_array[index3+2],pop[p][i][0][1].regulatory, mutational_model); // This function mutates the regulatory region
+            reg_mu(mutate_reg_array[index3+2],pop[p][i][0][1].regulatory, mutational_model); // This function mutates the regulatory regionv
+//            cout << " after mutation " << pop[p][i][0][1].regulatory << "";
+            
             
             //cout << "The second parent is # " << parent2 << " and its picked allele at the second locus is " << recomb_array[index+3] << " (" << pop_after_selection[p][parent2][1][recomb_array[index+2]].coding << ")" << endl;
+//            cout << "before mutation " << pop[p][i][1][1].regulatory << "";
             pop[p][i][1][1].coding =     pop_after_selection[p][parent2][1][recomb_array[index+3]].coding+(mutate_code_array[index2+3]);
             pop[p][i][1][1].regulatory = pop_after_selection[p][parent2][1][recomb_array[index+3]].regulatory;
             reg_mu(mutate_reg_array[index3+3],pop[p][i][1][1].regulatory, mutational_model); // This function mutates the regulatory region
+//            cout << " after mutation " << pop[p][i][1][1].regulatory << endl;
+            
+            
+//            cout << "value=" << (mutate_reg_array[index3]) << " " << (mutate_reg_array[index3+1]) << " " << (mutate_reg_array[index3+2]) << " " << (mutate_reg_array[index3+3]) << endl;
             
             index+=4;
             index2+=4;
