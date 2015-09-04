@@ -584,7 +584,7 @@ int main(int argc, char *argv[])
                 fitness_file << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
                 gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
                 Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << p << "\t" <<
-                Pop.meanAbsoluteFitness(p, 0) << Distance <<"\t" << endl;
+                Pop.meanAbsoluteFitness(p, 0) << "\t" << Distance <<"\t" << endl;
             
             }
             
@@ -628,7 +628,7 @@ int main(int argc, char *argv[])
                 fitness_file << g << "\t" << mu << "\t" << reg_mu << "\t" << mu_var << "\t" << reg_pattern << "\t" << theta  << "\t" <<
                 gamma << "\t" << mod << "\t" << allelic_Stdev << "\t" << rec << "\t" << m_rate << "\t" << selection_mode << "\t" << rep << "\t" << x1 << "\t" << x2 << "\t" <<
                 Pop.opts[0].x_opt << "\t" << Pop.opts[0].y_opt <<  "\t" <<  Pop.opts[0].om11 << "\t" << Pop.opts[0].om12 << "\t" << (-1*(f+1)) << "\t" << // the 1 indicates hybrids
-                Pop.meanAbsoluteFitness(f, 1) << Distance << "\t" << endl;
+                Pop.meanAbsoluteFitness(f, 1) << "\t" << Distance << "\t" << endl;
 
                 // Print the hybrid phenotypes to file
                 // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
@@ -2357,10 +2357,7 @@ double Populations::meanAbsoluteFitness(int WhichPop, int flag)
 
 void Populations::Pheno_to_Optimum_distance(int WhichPop, int HybridFlag, double &EucDist)
 {
-    double mean_x(0.0);
-    double sum_x(0.0);
-    double mean_y(0.0);
-    double sum_y(0.0);
+    double sum_dist(0.0);
     
     /* To get the mean phenotypic distance from the the optimum we first have to 
      * calculate the mean phenotypic distance for both traits. Then we have to apply
@@ -2372,26 +2369,22 @@ void Populations::Pheno_to_Optimum_distance(int WhichPop, int HybridFlag, double
     {
         for(int i=0; i<numInd; i++)
         {
-            sum_x+=xys[WhichPop][i].xx;
-            sum_y+=xys[WhichPop][i].yy;
+            sum_dist += sqrt(pow((xys[WhichPop][i].xx-opts[0].x_opt),2) + pow((xys[WhichPop][i].yy-opts[0].y_opt),2));
         }
     } else if(HybridFlag==1)
     {
         for(int i=0; i<numInd; i++)
         {
-            sum_x+=xyw_hybrids[WhichPop][i].xx;
-            sum_y+=xyw_hybrids[WhichPop][i].yy;
+            sum_dist += sqrt(pow((xyw_hybrids[WhichPop][i].xx-opts[0].x_opt),2) + pow((xyw_hybrids[WhichPop][i].yy-opts[0].y_opt),2));
+
             
         }
     }
-    // So this is the mean for each trait for this particular population
-    mean_x = sum_x/static_cast<double>(numInd);
-    mean_y = sum_y/static_cast<double>(numInd);
+
     
-    // cout << "This is the x optimum " << opts[0].x_opt << " and this is the y optimum " << opts[0].y_opt << endl;
-    
-    // And return the distance
-    EucDist = sqrt(pow((mean_x-opts[0].x_opt),2) + pow((mean_y-opts[0].y_opt),2));
+    EucDist = sum_dist/static_cast<double>(numInd);
+
+
 }
 
 
