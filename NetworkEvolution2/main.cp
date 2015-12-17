@@ -128,7 +128,7 @@ public:
     // Print population to screen (for debugging)
     void printPop(int flag); // flag==1 then print only the last flag individuals
     
-    int mutational_model=0; // Advanced setting. 1 == stepping stone model of reg mutation. otherwise, a lattice model is used.
+    int mutational_model=1; // Advanced setting. 1 == stepping stone model of reg mutation. otherwise, a lattice model is used.
     
     //    // For output
     //    void outputData(int nSamples, int generation, double mu, double reg_mu, double mu_var, char* reg_pattern, double theta, double gamma, char *mod, double allelic_Stdev, double rec, double m_rate, int selection_mode, int parFit0_hybridFit1_all2, double meanAbsFit);
@@ -532,12 +532,34 @@ int main(int argc, char *argv[])
     int nSamples(100); // Only output the first nSamples of individuals
     
     
-    
+    int newRegimeTime(9000);
+    double newom11(1000);
     
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){
+//        cout << "The number of pops is " << numPops << endl;
         
+        
+        /* This block is experimental. It overwrites the
+         * variance in stabilizing selection starting on the
+         * specified generation to the specified value */
+        if(g==newRegimeTime){
+            for(int p=0; p<numPops; p++)
+            {
+//               cout << "Generation " << g << " Population " << p << " om11 before " << Pop.opts[p].om11 << "\t";
+               Pop.opts[p].om11=newom11;
+//               cout << " om11 after " << Pop.opts[p].om11 << endl;
+            }
+            
+        }
+        
+//        for(int p=0; p<numPops; p++)
+//        {
+//            cout << "Generation " << g << "\tom11 = " << Pop.opts[0].om11 << "\t";
+//        }
+//        cout << endl;
 
+        
         if(g % 250 == 0)
         {
             cout << "Generation " << g << "\n";
@@ -562,7 +584,7 @@ int main(int argc, char *argv[])
         
         if(g % outputFreq == 0)
         {
-            
+           
             // Output the genotypes, phenotypes, and fitness for the first nSamples (or all) individuals every outputFreq generations
             for(int p=0; p<numPops; p++)
             {
@@ -1045,9 +1067,11 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
 {
     using namespace std;
     //        cout << "model is: " << mod << endl;
+//    cout << "theta was: " << theta << " ";
+//    theta = (a11+a12);
     switch(mod)
     {
-            
+           
         case 'A':
             if(r00 == "0" && r01 == "0" && r10=="0" && r11=="0"){
                 XX = (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow((-a11-a12+a21+a22+gamma*theta),2)))/(2*gamma);
@@ -1373,6 +1397,7 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
                 XX = ((a11+a12)*(a21+a22)-pow(gamma, 2)*pow(theta, 2))/(gamma*(a21+a22+gamma*theta));
                 YY = ((a11+a12)*(a21+a22)-pow(gamma, 2)*pow(theta, 2))/(gamma*(a11+a12+gamma*theta));
             }
+//            cout << "theta is now: " << theta << endl;
             break;
             
         case 'B':
