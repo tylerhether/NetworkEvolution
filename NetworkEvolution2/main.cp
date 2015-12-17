@@ -1015,17 +1015,17 @@ void Populations::getPheno(double theta, double gamma, char mod, int flag)
                               xys[p][i].xx,
                               xys[p][i].yy);
                 //Testing
-                //                geno_to_pheno(150.312,
-                //                              151.526,
-                //                              144.518,
-                //                              151.526,
-                //                              "1","1","1","1",
-                //                              theta,
-                //                              gamma,
-                //                              mod,
-                //                              xys[p][i].xx,
-                //                              xys[p][i].yy);
-                
+//                                geno_to_pheno(555.302,
+//                                              555.302,
+//                                              -132.525,
+//                                              -132.525,
+//                                              "1","1","0","0",
+//                                              theta,
+//                                              gamma,
+//                                              mod,
+//                                              xys[p][i].xx,
+//                                              xys[p][i].yy);
+//
             }
             
         }
@@ -1892,7 +1892,19 @@ void Populations::geno_to_pheno(double a11, double a12, double a21, double a22, 
             break;
     }
     
-    //    cout << "Troubleshooting: theta: "<<theta<<", gamma: "<<gamma<<" "<<r00<<r01<<r10<<r11<<" a11: "<<a11<<" a12: "<<a12<<" a21: "<<a21<<" a22: "<<a22<< " x: "<<XX<<" y: "<<YY<<endl;
+    // In some rare cases the phenotypes are imaginary (sqrt(negative number))
+    // and in some other, rare cases the phenotypes produce a negative phenotype
+    // (i.e., a negative equilibrium rate). If so, convert the values to zero.
+    if(!(XX>0))
+    {
+        XX = 0.0;
+    }
+    if(!(YY>0))
+    {
+        YY = 0.0;
+    }
+//        cout << "Troubleshooting: theta: "<<theta<<", gamma: "<<gamma<<" "<<r00<<r01<<r10<<r11<<" a11: "<<a11<<" a12: "<<a12<<" a21: "<<a21<<" a22: "<<a22<< " x: "<<XX<<" y: "<<YY<<endl;
+
     //    cout << (a11+a12-a21-a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+(-a11-a12+a21+a22+gamma*theta)*exp(2)))/(2*gamma) << " " <<
     //    (-a11-a12+a21+a22-gamma*theta+sqrt(4*(a11+a12)*gamma*theta+pow(-a11-a12+a21+a22+gamma*theta,2)))/(2*gamma) << endl;
     
