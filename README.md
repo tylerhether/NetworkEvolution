@@ -1,6 +1,6 @@
 # ParallelSim
 
-ParallelSim
+ParallelSim is a C++ program used to simulate two quantitative traits for a user-defined number of populations evolving to identical fitness optima (hence `Parallel') under a quantitative genetics framework. A key feature of ParallelSim is the ability to simulate two classes of mutations: those in the allelic (coding) alleles and those in the cis-regulatory regions of a two gene genetic network. More details can be found in the upcoming paper by Hether et al. 
 
 
 To build: 
