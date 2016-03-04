@@ -532,8 +532,11 @@ int main(int argc, char *argv[])
     int nSamples(100); // Only output the first nSamples of individuals
     
     
+    /* This is an advanced feature. If you change from OM11 to another value it will switch the variance
+     * in stabilizing selection to the specified value after newRegimeTime generations.
+     */
     int newRegimeTime(9000);
-    double newom11(1000);
+    double newom11(OM11);
     
     // Recursion:
     for(int g=1; g<(1+num_generations); g++){

@@ -24,7 +24,7 @@
 
 /* Begin PBXFileReference section */
 		7B886CA11AEAAF51007C779D /* main.cp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cp; sourceTree = SOURCE_ROOT; };
-		7BFF3C8B1AE6FC2700965291 /* NetworkEvo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = NetworkEvo; sourceTree = BUILT_PRODUCTS_DIR; };
+		7BFF3C8B1AE6FC2700965291 /* ParallelSim */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ParallelSim; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,7 +49,7 @@
 		7BFF3C8C1AE6FC2700965291 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7BFF3C8B1AE6FC2700965291 /* NetworkEvo */,
+				7BFF3C8B1AE6FC2700965291 /* ParallelSim */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -65,9 +65,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7BFF3C8A1AE6FC2700965291 /* NetworkEvo */ = {
+		7BFF3C8A1AE6FC2700965291 /* ParallelSim */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7BFF3C901AE6FC2700965291 /* Build configuration list for PBXNativeTarget "NetworkEvo" */;
+			buildConfigurationList = 7BFF3C901AE6FC2700965291 /* Build configuration list for PBXNativeTarget "ParallelSim" */;
 			buildPhases = (
 				7BFF3C871AE6FC2700965291 /* Sources */,
 				7BFF3C881AE6FC2700965291 /* Frameworks */,
@@ -77,9 +77,9 @@
 			);
 			dependencies = (
 			);
-			name = NetworkEvo;
+			name = ParallelSim;
 			productName = NetworkEvo;
-			productReference = 7BFF3C8B1AE6FC2700965291 /* NetworkEvo */;
+			productReference = 7BFF3C8B1AE6FC2700965291 /* ParallelSim */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -88,7 +88,7 @@
 		7BFF3C7E1AE6FBC100965291 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0620;
+				LastUpgradeCheck = 0720;
 				TargetAttributes = {
 					7BFF3C8A1AE6FC2700965291 = {
 						CreatedOnToolsVersion = 6.2;
@@ -107,7 +107,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				7BFF3C8A1AE6FC2700965291 /* NetworkEvo */,
+				7BFF3C8A1AE6FC2700965291 /* ParallelSim */,
 			);
 		};
 /* End PBXProject section */
@@ -127,6 +127,8 @@
 		7BFF3C821AE6FBC100965291 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_TESTABILITY = YES;
+				ONLY_ACTIVE_ARCH = YES;
 			};
 			name = Debug;
 		};
@@ -224,7 +226,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		7BFF3C901AE6FC2700965291 /* Build configuration list for PBXNativeTarget "NetworkEvo" */ = {
+		7BFF3C901AE6FC2700965291 /* Build configuration list for PBXNativeTarget "ParallelSim" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7BFF3C911AE6FC2700965291 /* Debug */,

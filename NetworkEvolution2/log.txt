@@ -1,6 +1,0 @@
-3
-# of populations are 3
-# of individuals are 100
-# of loci are 2
-# of alleles are 2
-reg = 1122 x = 200 y = 300 theta = 300 gamma= 1 model= B a1= 200 a2= 214.286

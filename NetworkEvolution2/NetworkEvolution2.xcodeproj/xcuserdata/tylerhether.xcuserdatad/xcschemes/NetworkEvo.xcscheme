@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0620"
+   LastUpgradeVersion = "0720"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -15,47 +15,50 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7BFF3C8A1AE6FC2700965291"
-               BuildableName = "NetworkEvo"
-               BlueprintName = "NetworkEvo"
+               BuildableName = "ParallelSim"
+               BlueprintName = "ParallelSim"
                ReferencedContainer = "container:NetworkEvolution2.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      buildConfiguration = "Debug">
+      shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
       </Testables>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7BFF3C8A1AE6FC2700965291"
-            BuildableName = "NetworkEvo"
-            BlueprintName = "NetworkEvo"
+            BuildableName = "ParallelSim"
+            BlueprintName = "ParallelSim"
             ReferencedContainer = "container:NetworkEvolution2.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
+      <AdditionalOptions>
+      </AdditionalOptions>
    </TestAction>
    <LaunchAction
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
       customWorkingDirectory = "/Users/tylerhether/Projects/09-NetworkEvolutioncpp/NetworkEvolution/NetworkEvolution2"
-      buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7BFF3C8A1AE6FC2700965291"
-            BuildableName = "NetworkEvo"
-            BlueprintName = "NetworkEvo"
+            BuildableName = "ParallelSim"
+            BlueprintName = "ParallelSim"
             ReferencedContainer = "container:NetworkEvolution2.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -69,23 +72,23 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i 1000"
+            argument = "-i 200"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-gen 10000"
+            argument = "-gen &quot;2000&quot;"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu 0.02"
+            argument = "-mu 1e-04"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-mu_var 50"
+            argument = "-mu_var 10"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-reg_mu 0.002"
+            argument = "-reg_mu 1e-04"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -93,31 +96,31 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_start 300"
+            argument = "-x_start 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_start 300"
+            argument = "-y_start 1000"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-x_opt 500"
+            argument = "-x_opt 600"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-y_opt 500"
+            argument = "-y_opt 600"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_network 0000"
+            argument = "-start_network 1111"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-sel_var 1000"
+            argument = "-sel_var 1e4"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-sel_covar 0"
+            argument = "-sel_corr 0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -125,7 +128,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-theta 300"
+            argument = "-theta 100"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -133,11 +136,11 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-model &apos;B&apos;"
+            argument = "-model &apos;A&apos;"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-start_deviation 2"
+            argument = "-start_deviation 0"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -145,19 +148,23 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_freq 10"
+            argument = "-output_freq 1"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_pheno_file phenotypes2.txt"
+            argument = "-output_pheno_file phenotypes.txt"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-output_fitness_file fitness2.txt"
+            argument = "-output_fitness_file fitness.txt"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-rep 1"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-FxGens 2"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
@@ -202,18 +209,18 @@
       </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
+      buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7BFF3C8A1AE6FC2700965291"
-            BuildableName = "NetworkEvo"
-            BlueprintName = "NetworkEvo"
+            BuildableName = "ParallelSim"
+            BlueprintName = "ParallelSim"
             ReferencedContainer = "container:NetworkEvolution2.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
