@@ -1,7 +1,7 @@
 # ParallelSim
-Network Evolution and DMIs. 
 
 To build: 
+cd ./NetworkEvolution2
 g++ -std=c++11 main.cp -o ParallelSim
 
 To simulate:
